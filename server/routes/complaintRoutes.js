@@ -9,10 +9,12 @@ const { getAllComplaints } = require("../controllers/complaintController");
 
 const { updateComplaintStatus } = require("../controllers/complaintController");
 
+const upload = require("../middleware/uploadMiddleware");
 router.put("/:id", protect, adminOnly, updateComplaintStatus);
 router.get("/", protect, adminOnly, getAllComplaints);
 
-router.post("/", protect, createComplaint);
+router.post("/", protect, upload.single("image"), createComplaint);
+
 router.get("/my", protect, getUserComplaints);
 
 module.exports = router;

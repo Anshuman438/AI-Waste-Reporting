@@ -1,21 +1,45 @@
 const Complaint = require("../models/Complaints");
+const cloudinary = require("../config/cloudinary");
+const classifyImage = require("../utils/aiClassifier");
 
 // @desc Create Complaint
 // @route POST /api/complaints
 // @access Private
 const createComplaint = async (req, res) => {
   try {
-    const { imageUrl, wasteType, description, location } = req.body;
+    const { description, location } = req.body;
 
-    const complaint = await Complaint.create({
-      imageUrl,
-      wasteType,
-      description,
-      location,
-      reportedBy: req.user._id,
-    });
+    if (!req.file) {
+      return res.status(400).json({ message: "No image uploaded" });
+    }
 
-    res.status(201).json(complaint);
+    cloudinary.uploader
+      .upload_stream({ folder: "waste_reports" }, async (error, result) => {
+        if (error) {
+          return res.status(500).json({ message: "Image upload failed" });
+        }
+
+        //  AI CLASSIFICATION
+        const aiResult = await classifyImage(result.secure_url);
+
+        let wasteType = "unknown";
+
+        if (aiResult && aiResult[0]) {
+          wasteType = aiResult[0].label;
+        }
+
+        //  SAVE TO DATABASE
+        const complaint = await Complaint.create({
+          imageUrl: result.secure_url,
+          wasteType: wasteType,
+          description,
+          location: JSON.parse(location),
+          reportedBy: req.user._id,
+        });
+
+        res.status(201).json(complaint);
+      })
+      .end(req.file.buffer);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -66,6 +90,9 @@ const updateComplaintStatus = async (req, res) => {
   }
 };
 
-//module.exports = { createComplaint };
-//module.exports = { createComplaint, getUserComplaints };
-module.exports = { createComplaint, getUserComplaints, getAllComplaints,updateComplaintStatus,};
+module.exports = {
+  createComplaint,
+  getUserComplaints,
+  getAllComplaints,
+  updateComplaintStatus,
+};
