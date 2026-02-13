@@ -9,7 +9,7 @@ const ReportWaste = () => {
   const [location, setLocation] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // 📍 Get real GPS location when page loads
+  //  Get real GPS location when page loads
   useEffect(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -29,7 +29,7 @@ const ReportWaste = () => {
     }
   }, []);
 
-  // 🤖 Predict waste type
+  //  Predict waste type
   const predictImage = async (selectedFile) => {
     setFile(selectedFile);
     setLoading(true);

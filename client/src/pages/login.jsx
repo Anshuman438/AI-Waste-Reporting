@@ -5,7 +5,9 @@ function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const handleLogin = async () => {
+  const handleLogin = async (e) => {
+    e.preventDefault();
+
     try {
       const response = await axios.post(
         "http://localhost:5000/api/auth/login",
@@ -15,10 +17,14 @@ function Login() {
         }
       );
 
-      // Store token
+      // Store token and full user object
       localStorage.setItem("token", response.data.token);
+      localStorage.setItem("user", JSON.stringify(response.data));
 
       alert("Login successful");
+
+      // Redirect after login
+      window.location.href = "/";
     } catch (error) {
       console.error(error.response?.data || error.message);
       alert("Login failed");
@@ -26,24 +32,32 @@ function Login() {
   };
 
   return (
-    <div>
+    <div style={{ padding: "40px" }}>
       <h2>Login</h2>
 
-      <input
-        type="email"
-        placeholder="Enter email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-      />
+      <form onSubmit={handleLogin}>
+        <input
+          type="email"
+          placeholder="Enter email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+        />
 
-      <input
-        type="password"
-        placeholder="Enter password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-      />
+        <br /><br />
 
-      <button onClick={handleLogin}>Login</button>
+        <input
+          type="password"
+          placeholder="Enter password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+        />
+
+        <br /><br />
+
+        <button type="submit">Login</button>
+      </form>
     </div>
   );
 }
