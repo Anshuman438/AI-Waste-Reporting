@@ -1,13 +1,14 @@
 const Complaint = require("../models/Complaints");
 const cloudinary = require("../config/cloudinary");
-const classifyImage = require("../utils/aiClassifier");
 
 // @desc Create Complaint
 // @route POST /api/complaints
 // @access Private
 const createComplaint = async (req, res) => {
   try {
-    const { description, location } = req.body;
+    const { wasteType, description, location } = req.body;
+
+    console.log("Received wasteType:", wasteType);
 
     if (!req.file) {
       return res.status(400).json({ message: "No image uploaded" });
@@ -19,19 +20,9 @@ const createComplaint = async (req, res) => {
           return res.status(500).json({ message: "Image upload failed" });
         }
 
-        //  AI CLASSIFICATION
-        const aiResult = await classifyImage(result.secure_url);
-
-        let wasteType = "unknown";
-
-        if (aiResult && aiResult[0]) {
-          wasteType = aiResult[0].label;
-        }
-
-        //  SAVE TO DATABASE
         const complaint = await Complaint.create({
           imageUrl: result.secure_url,
-          wasteType: wasteType,
+          wasteType: wasteType, //  Directly use frontend AI result
           description,
           location: JSON.parse(location),
           reportedBy: req.user._id,
