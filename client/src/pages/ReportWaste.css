@@ -1,0 +1,56 @@
+.report-wrapper {
+  min-height: 100vh;
+  background: #f9fafb;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.report-card {
+  width: 450px;
+  padding: 30px;
+  text-align: center;
+}
+
+.report-card input,
+.report-card textarea {
+  width: 100%;
+  margin-top: 12px;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+}
+
+.preview-img {
+  margin-top: 15px;
+  width: 100%;
+  border-radius: 12px;
+}
+
+.prediction {
+  margin-top: 10px;
+  font-weight: bold;
+  color: #f97316;
+}
+
+.success-msg {
+  margin-top: 10px;
+  color: green;
+  font-weight: bold;
+}
+
+.loader {
+  margin: 15px auto;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #f97316;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  100% {
+    transform: rotate(360deg);
+  }
+}

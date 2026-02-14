@@ -1,108 +1,35 @@
-/* Page Background */
-.admin-page {
-  min-height: 100vh;
-  background-color: #f4f6f9;
-  font-family: Arial, Helvetica, sans-serif;
-}
-
-/* Header */
-.admin-header {
-  background-color: white;
-  padding: 20px;
-  text-align: center;
-  font-size: 22px;
-  font-weight: bold;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
-}
-
-/* Main Container */
-.admin-container {
-  max-width: 1100px;
-  margin: 30px auto;
-  padding: 10px;
-}
-
-/* Grid Layout */
-.card-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 20px;
-}
-
-/* Card */
-.complaint-card {
-  background-color: white;
-  border-radius: 12px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
-  overflow: hidden;
-  transition: transform 0.2s ease;
-}
-
-.complaint-card:hover {
-  transform: translateY(-5px);
-}
-
-/* Image */
-.card-image {
-  width: 100%;
-  height: 220px;
-  object-fit: cover;
-}
-
-/* Card Content */
-.card-content {
-  padding: 15px;
-}
-
-/* Title Row */
-.card-top {
+.admin-layout {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 10px;
+  min-height: 100vh;
 }
 
-/* Status Badge */
-.status {
-  padding: 5px 12px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: bold;
+.admin-content {
+  flex: 1;
+  padding: 50px;
 }
 
-.status-pending {
-  background-color: #fff3cd;
-  color: #856404;
+.admin-content h2 {
+  margin-bottom: 20px;
+  font-size: 20px;
 }
 
-.status-progress {
-  background-color: #cce5ff;
-  color: #004085;
+.complaint-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 30px;
+  margin-bottom: 50px;
 }
 
-.status-resolved {
-  background-color: #d4edda;
-  color: #155724;
-}
-
-/* Description */
-.description {
-  font-size: 14px;
-  color: #555;
-  margin-bottom: 8px;
-}
-
-/* Location */
-.location {
-  font-size: 12px;
-  color: #888;
+.card img {
+  width: 100%;
+  height: 200px;
+  border-radius: 16px;
+  object-fit: cover;
   margin-bottom: 12px;
 }
 
-/* Dropdown */
-.status-select {
-  width: 100%;
-  padding: 8px;
-  border-radius: 8px;
-  border: 1px solid #ccc;
+.map-section {
+  margin-top: 40px;
+  border-radius: 20px;
+  overflow: hidden;
 }

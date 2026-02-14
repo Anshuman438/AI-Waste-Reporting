@@ -1,0 +1,17 @@
+.login-wrapper {
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: linear-gradient(135deg, #fff7ed, #f8fafc);
+}
+
+.login-card {
+  width: 420px;
+  text-align: center;
+}
+
+.login-card h2 {
+  margin-bottom: 10px;
+  font-weight: 700;
+}

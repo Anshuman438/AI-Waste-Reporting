@@ -1,65 +1,49 @@
 import React, { useState } from "react";
 import axios from "axios";
+import "./Login.css";
 
-function Login() {
+const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
   const handleLogin = async (e) => {
     e.preventDefault();
 
-    try {
-      const response = await axios.post(
-        "http://localhost:5000/api/auth/login",
-        {
-          email,
-          password,
-        }
-      );
+    const res = await axios.post(
+      "http://localhost:5000/api/auth/login",
+      { email, password }
+    );
 
-      // Store token and full user object
-      localStorage.setItem("token", response.data.token);
-      localStorage.setItem("user", JSON.stringify(response.data));
+    localStorage.setItem("token", res.data.token);
+    localStorage.setItem("user", JSON.stringify(res.data));
 
-      alert("Login successful");
-
-      // Redirect after login
-      window.location.href = "/";
-    } catch (error) {
-      console.error(error.response?.data || error.message);
-      alert("Login failed");
-    }
+    window.location.href =
+      res.data.role === "admin" ? "/admin" : "/dashboard";
   };
 
   return (
-    <div style={{ padding: "40px" }}>
-      <h2>Login</h2>
+    <div className="login-wrapper">
+      <div className="card login-card">
+        <h2>Login</h2>
 
-      <form onSubmit={handleLogin}>
         <input
           type="email"
-          placeholder="Enter email"
-          value={email}
+          placeholder="Email"
           onChange={(e) => setEmail(e.target.value)}
-          required
         />
-
-        <br /><br />
 
         <input
           type="password"
-          placeholder="Enter password"
-          value={password}
+          placeholder="Password"
           onChange={(e) => setPassword(e.target.value)}
-          required
         />
 
-        <br /><br />
-
-        <button type="submit">Login</button>
-      </form>
+        <button className="btn-primary" onClick={handleLogin}>
+          Login
+        </button>
+      </div>
     </div>
   );
-}
+};
 
 export default Login;

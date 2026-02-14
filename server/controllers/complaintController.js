@@ -8,7 +8,7 @@ const createComplaint = async (req, res) => {
   try {
     const { wasteType, description, location } = req.body;
 
-    console.log("Received wasteType:", wasteType);
+    //console.log("Received wasteType:", wasteType);
 
     if (!req.file) {
       return res.status(400).json({ message: "No image uploaded" });
@@ -81,9 +81,25 @@ const updateComplaintStatus = async (req, res) => {
   }
 };
 
+const deleteComplaint = async (req, res) => {
+  try {
+    const complaint = await Complaint.findById(req.params.id);
+
+    if (!complaint) {
+      return res.status(404).json({ message: "Not found" });
+    }
+
+    await complaint.deleteOne();
+    res.json({ message: "Complaint deleted" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   createComplaint,
   getUserComplaints,
   getAllComplaints,
   updateComplaintStatus,
+  deleteComplaint,
 };

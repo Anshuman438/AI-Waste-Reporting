@@ -1,0 +1,17 @@
+.dashboard-wrapper {
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.dashboard-card {
+  width: 500px;
+  text-align: center;
+}
+
+.dashboard-card button {
+  width: 100%;
+  margin-top: 14px;
+  font-size: 15px;
+}
