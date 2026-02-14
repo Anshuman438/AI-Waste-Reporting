@@ -5,7 +5,7 @@ import {
   useLocation,
 } from "react-router-dom";
 
-import Login from "./pages/Login";
+import Login from "./pages/Login1";
 import ReportWaste from "./pages/ReportWaste";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AdminDashboard from "./pages/AdminDashboard";
