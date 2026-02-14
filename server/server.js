@@ -1,19 +1,29 @@
 const express = require("express");
 const dotenv = require("dotenv");
-require("dotenv").config();
 const cors = require("cors");
 const connectDB = require("./config/db");
+
 const authRoutes = require("./routes/authRoutes");
 const complaintRoutes = require("./routes/complaintRoutes");
 
 dotenv.config();
-
 connectDB();
 
 const app = express();
 
-app.use(cors());
+// ✅ CORS configuration (production ready)
+app.use(
+  cors({
+    origin: [
+      "http://localhost:5173",
+      "https://ai-waste-reporting-system.vercel.app"
+    ],
+    credentials: true,
+  })
+);
+
 app.use(express.json());
+
 app.use("/api/auth", authRoutes);
 app.use("/api/complaints", complaintRoutes);
 
