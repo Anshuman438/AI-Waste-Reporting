@@ -15,8 +15,7 @@ const AdminDashboard = () => {
   const fetchData = async () => {
     const token = localStorage.getItem("token");
 
-    const res = await axios.get(
-      "http://localhost:5000/api/complaints",
+    const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/complaints`,
       { headers: { Authorization: `Bearer ${token}` } }
     );
 
@@ -37,7 +36,8 @@ const AdminDashboard = () => {
     const token = localStorage.getItem("token");
 
     await axios.put(
-      `http://localhost:5000/api/complaints/${id}`,
+  `${import.meta.env.VITE_API_URL}/api/complaints/${id}`,
+
       { status },
       { headers: { Authorization: `Bearer ${token}` } }
     );
