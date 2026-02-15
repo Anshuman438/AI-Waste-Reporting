@@ -13,7 +13,7 @@ const app = express();
 
 const allowedOrigins = [
   "http://localhost:5173",
-  "https://ai-waste-reporting-system-mgvajv7ha-anshuman438s-projects.vercel.app"
+  "https://ai-waste-reporting.vercel.app"
 ];
 
 app.use(cors({
