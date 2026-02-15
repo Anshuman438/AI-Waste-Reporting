@@ -14,6 +14,7 @@ import UserDashboard from "./pages/UserDashboard";
 import MyComplaints from "./pages/MyComplaints";
 import Navbar from "./components/Navbar";
 import Landing from "./pages/Landing";
+import Register from "./pages/Register";
 
 function App() {
   const location = useLocation();
@@ -35,6 +36,8 @@ function App() {
 
         {/* Login */}
         <Route path="/login" element={<Login />} />
+
+        <Route path="/register" element={<Register />} />
 
         {/* User Routes */}
         <Route
@@ -79,6 +82,8 @@ function App() {
           path="*"
           element={<Navigate to="/" />}
         />
+
+
 
       </Routes>
     </>
