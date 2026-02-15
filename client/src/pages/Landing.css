@@ -5,19 +5,29 @@
 /* HERO */
 .hero {
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  padding: 100px 80px;
-  position: relative;
+  align-items: center;
+  padding: 120px 100px;
+  min-height: 90vh;
 }
 
-.hero-content {
-  max-width: 550px;
+.hero-left {
+  max-width: 600px;
+}
+
+.badge {
+  background: #fff7ed;
+  color: #f97316;
+  padding: 8px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .hero h1 {
-  font-size: 48px;
+  font-size: 52px;
   font-weight: 700;
+  margin-top: 20px;
   line-height: 1.2;
 }
 
@@ -27,38 +37,73 @@
 
 .hero p {
   margin-top: 20px;
-  color: #6b7280;
   font-size: 18px;
+  color: #6b7280;
 }
 
 .hero-buttons {
   margin-top: 30px;
 }
 
-.btn-secondary {
-  background: #fff7ed;
-  color: #f97316;
-  border: none;
+.btn-outline {
+  margin-left: 14px;
   padding: 12px 20px;
   border-radius: 12px;
-  margin-left: 12px;
+  border: 2px solid #f97316;
+  background: transparent;
+  color: #f97316;
   cursor: pointer;
 }
 
-.hero-visual {
+.btn-outline:hover {
+  background: #f97316;
+  color: white;
+}
+
+.hero-stats {
+  display: flex;
+  gap: 40px;
+  margin-top: 40px;
+}
+
+.hero-stats h3 {
+  margin: 0;
+  font-size: 22px;
+  color: #f97316;
+}
+
+/* RIGHT SIDE VISUAL */
+.hero-right {
+  position: relative;
   width: 400px;
   height: 400px;
-  background: radial-gradient(circle, #f97316 0%, transparent 70%);
+}
+
+.floating-card {
+  position: absolute;
+  top: 50px;
+  right: 0;
+  width: 250px;
+  animation: float 5s ease-in-out infinite;
+}
+
+.floating-glow {
+  width: 350px;
+  height: 350px;
+  background: radial-gradient(circle, rgba(249,115,22,0.4), transparent 70%);
   border-radius: 50%;
-  animation: float 6s ease-in-out infinite;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  animation: glow 6s ease-in-out infinite;
 }
 
 /* FEATURES */
 .features {
   display: flex;
   justify-content: center;
-  gap: 30px;
-  padding: 80px;
+  gap: 40px;
+  padding: 100px;
 }
 
 .feature-card {
@@ -69,7 +114,7 @@
 /* CTA */
 .cta {
   text-align: center;
-  padding: 80px;
+  padding: 100px;
   background: linear-gradient(135deg, #fff7ed, #f5f5f3);
 }
 
@@ -77,9 +122,15 @@
   margin-bottom: 20px;
 }
 
-/* FLOAT ANIMATION */
+/* ANIMATIONS */
 @keyframes float {
   0% { transform: translateY(0px); }
   50% { transform: translateY(-20px); }
   100% { transform: translateY(0px); }
+}
+
+@keyframes glow {
+  0% { transform: scale(1); opacity: 0.8; }
+  50% { transform: scale(1.1); opacity: 0.5; }
+  100% { transform: scale(1); opacity: 0.8; }
 }

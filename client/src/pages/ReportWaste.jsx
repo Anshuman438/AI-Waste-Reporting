@@ -3,6 +3,8 @@ import axios from "axios";
 import * as tf from "@tensorflow/tfjs";
 import "./ReportWaste.css";
 
+const API = import.meta.env.VITE_API_URL;
+
 const ReportWaste = () => {
   const [file, setFile] = useState(null);
   const [preview, setPreview] = useState(null);
@@ -11,8 +13,18 @@ const ReportWaste = () => {
   const [loading, setLoading] = useState(false);
   const [location, setLocation] = useState(null);
   const [success, setSuccess] = useState(false);
+  const [model, setModel] = useState(null);
 
-  // Get real GPS location
+  /* Load AI Model Once */
+  useEffect(() => {
+    const loadModel = async () => {
+      const loadedModel = await tf.loadLayersModel("/model/model.json");
+      setModel(loadedModel);
+    };
+    loadModel();
+  }, []);
+
+  /* Get GPS Location */
   useEffect(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -22,22 +34,18 @@ const ReportWaste = () => {
             lng: position.coords.longitude,
           });
         },
-        (error) => {
-          console.error("Location error:", error);
-        }
+        (error) => console.error("Location error:", error)
       );
     }
   }, []);
 
   const predictImage = async (selectedFile) => {
-    if (!selectedFile) return;
+    if (!selectedFile || !model) return;
 
     setFile(selectedFile);
     setPreview(URL.createObjectURL(selectedFile));
     setLoading(true);
     setSuccess(false);
-
-    const model = await tf.loadLayersModel("/model/model.json");
 
     const img = document.createElement("img");
     img.src = URL.createObjectURL(selectedFile);
@@ -74,8 +82,8 @@ const ReportWaste = () => {
 
     try {
       await axios.post(
-      `${import.meta.env.VITE_API_URL}/api/complaints`,
-      formData,
+        `${API}/api/complaints`,
+        formData,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -88,15 +96,20 @@ const ReportWaste = () => {
       setPreview(null);
       setPrediction("");
       setDescription("");
+
     } catch (error) {
-      console.error(error);
+      console.error("Submit error:", error);
     }
   };
 
   return (
     <div className="report-wrapper">
-      <div className="glass-card report-card">
-        <h2>Report Waste</h2>
+      <div className="report-card card">
+
+        <h2>AI Waste Detection</h2>
+        <p className="report-sub">
+          Upload an image and let AI classify the waste.
+        </p>
 
         <input
           type="file"
@@ -107,23 +120,26 @@ const ReportWaste = () => {
         />
 
         {preview && (
-          <img
-            src={preview}
-            alt="preview"
-            className="preview-img"
-          />
+          <div className="preview-section">
+            <img src={preview} alt="preview" />
+          </div>
         )}
 
-        {loading && <div className="loader"></div>}
+        {loading && (
+          <div className="loader"></div>
+        )}
 
         {prediction && (
-          <p className="prediction">
-            AI Detected: {prediction}
-          </p>
+          <div className="prediction-box">
+            AI Detected:
+            <span className="highlight">
+              {prediction}
+            </span>
+          </div>
         )}
 
         <textarea
-          placeholder="Describe the issue..."
+          placeholder="Add additional description..."
           value={description}
           onChange={(e) =>
             setDescription(e.target.value)
@@ -131,7 +147,7 @@ const ReportWaste = () => {
         />
 
         <button
-          className="orange-btn"
+          className="btn-primary"
           disabled={!prediction || loading}
           onClick={handleSubmit}
         >
@@ -139,10 +155,11 @@ const ReportWaste = () => {
         </button>
 
         {success && (
-          <p className="success-msg">
-            Complaint submitted successfully!
-          </p>
+          <div className="success-msg">
+            Complaint submitted successfully 🎉
+          </div>
         )}
+
       </div>
     </div>
   );

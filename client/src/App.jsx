@@ -15,12 +15,11 @@ import MyComplaints from "./pages/MyComplaints";
 import Navbar from "./components/Navbar";
 import Landing from "./pages/Landing";
 
-
 function App() {
   const location = useLocation();
 
-  // Hide Navbar on login page
-  const hideNavbarRoutes = ["/login"];
+  // Hide Navbar on landing & login
+  const hideNavbarRoutes = ["/", "/login"];
   const shouldHideNavbar = hideNavbarRoutes.includes(
     location.pathname
   );
@@ -30,14 +29,14 @@ function App() {
       {!shouldHideNavbar && <Navbar />}
 
       <Routes>
-        {/* Default Redirect */}
-        <Route
-          path="/"
-          element={<Navigate to="/login" />}
-        />
 
+        {/* Landing Page */}
+        <Route path="/" element={<Landing />} />
+
+        {/* Login */}
         <Route path="/login" element={<Login />} />
 
+        {/* User Routes */}
         <Route
           path="/dashboard"
           element={
@@ -65,6 +64,7 @@ function App() {
           }
         />
 
+        {/* Admin Route */}
         <Route
           path="/admin"
           element={
@@ -74,13 +74,11 @@ function App() {
           }
         />
 
-        {/* Catch All Unknown Routes */}
+        {/* Catch All */}
         <Route
           path="*"
-          element={<Navigate to="/login" />}
+          element={<Navigate to="/" />}
         />
-
-        <Route path="/" element={<Landing />} />
 
       </Routes>
     </>

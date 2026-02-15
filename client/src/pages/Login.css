@@ -3,7 +3,7 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  background: linear-gradient(135deg, #fff7ed, #f8fafc);
+  background: linear-gradient(135deg, #fff7ed, #f5f5f3);
 }
 
 .login-card {
@@ -12,6 +12,30 @@
 }
 
 .login-card h2 {
-  margin-bottom: 10px;
-  font-weight: 700;
+  font-size: 28px;
+  margin-bottom: 6px;
+}
+
+.login-subtext {
+  font-size: 14px;
+  color: #6b7280;
+  margin-bottom: 25px;
+}
+
+.login-card form {
+  display: flex;
+  flex-direction: column;
+}
+
+.login-card button {
+  margin-top: 16px;
+}
+
+.error-box {
+  background: #fee2e2;
+  color: #b91c1c;
+  padding: 10px;
+  border-radius: 10px;
+  margin-bottom: 15px;
+  font-size: 14px;
 }
