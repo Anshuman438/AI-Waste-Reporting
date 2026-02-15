@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import "./Login.css";
@@ -13,6 +13,20 @@ const Login = () => {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // Auto redirect if already logged in
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    const user = JSON.parse(localStorage.getItem("user"));
+
+    if (token && user) {
+      if (user.role === "admin") {
+        navigate("/admin");
+      } else {
+        navigate("/dashboard");
+      }
+    }
+  }, [navigate]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -47,37 +61,57 @@ const Login = () => {
     <div className="login-wrapper">
       <div className="login-card card">
 
+        <h1 className="login-title">
+          Waste<span>AI</span>
+        </h1>
+
         <h2>Welcome Back</h2>
+
         <p className="login-subtext">
-          Access your AI waste dashboard
+          Login to access your dashboard
         </p>
 
-        {error && <div className="error-box">{error}</div>}
+        {error && (
+          <div className="error-box">
+            {error}
+          </div>
+        )}
 
         <form onSubmit={handleLogin}>
-          <input
-            type="email"
-            placeholder="Email address"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
+          <div className="input-group">
+            <input
+              type="email"
+              placeholder="Email address"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </div>
 
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
+          <div className="input-group">
+            <input
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+          </div>
 
           <button
-            className="btn-primary"
+            className="btn-primary full-btn"
             disabled={loading}
           >
             {loading ? "Logging in..." : "Login"}
           </button>
         </form>
+
+        <div className="login-footer">
+          Don’t have an account?{" "}
+          <span onClick={() => navigate("/register")}>
+            Create one
+          </span>
+        </div>
 
       </div>
     </div>

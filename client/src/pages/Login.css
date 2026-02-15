@@ -3,32 +3,38 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  background: linear-gradient(135deg, #fff7ed, #f5f5f3);
+  background: #f5f5f3;
 }
 
 .login-card {
-  width: 420px;
+  width: 430px;
   text-align: center;
+  animation: fadeIn 0.5s ease;
 }
 
-.login-card h2 {
-  font-size: 28px;
-  margin-bottom: 6px;
+.login-title {
+  font-size: 26px;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.login-title span {
+  color: #f97316;
 }
 
 .login-subtext {
-  font-size: 14px;
   color: #6b7280;
-  margin-bottom: 25px;
+  font-size: 14px;
+  margin-bottom: 20px;
 }
 
-.login-card form {
-  display: flex;
-  flex-direction: column;
+.input-group {
+  margin-bottom: 15px;
 }
 
-.login-card button {
-  margin-top: 16px;
+.full-btn {
+  width: 100%;
+  margin-top: 10px;
 }
 
 .error-box {
@@ -38,4 +44,25 @@
   border-radius: 10px;
   margin-bottom: 15px;
   font-size: 14px;
+}
+
+.login-footer {
+  margin-top: 18px;
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.login-footer span {
+  color: #f97316;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.login-footer span:hover {
+  text-decoration: underline;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
