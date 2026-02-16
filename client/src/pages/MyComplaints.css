@@ -1,65 +1,152 @@
 .my-wrapper {
-  padding: 60px 80px;
-  background: #f5f5f3;
-  min-height: 100vh;
+  background: #c9af98;
+  min-height: 100dvh;
+  padding: 4vh 4vw;
 }
 
-.my-wrapper h2 {
+/*header - reduced height*/
+.my-header-box {
+  max-width: 1100px;
+  margin: auto;
   margin-bottom: 30px;
-  font-size: 26px;
+
+  background: #3a4660;
+  padding: 18px 24px;
+  border-radius: 14px;
+  color: white;
 }
 
+.my-header-box h1 {
+  font-size: 20px;
+  margin-bottom: 4px;
+}
+
+.my-header-box p {
+  font-size: 13px;
+  opacity: 0.9;
+}
+
+/*grid*/
 .my-grid {
+  max-width: 1100px;
+  margin: auto;
+
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 30px;
+  gap: 22px;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+/*card*/
+.complaint-card {
+  background: white;
+  border-radius: 16px;
+  overflow: hidden;
+
+  border: 2px solid #3a4660;
+  transition: 0.3s ease;
+}
+
+.complaint-card:hover {
+  border-color: #ed8a63;
+  transform: translateY(-3px);
 }
 
 .complaint-card img {
   width: 100%;
-  height: 200px;
+  height: 180px;
   object-fit: cover;
-  border-radius: 16px;
-  margin-bottom: 15px;
 }
 
-.complaint-content h3 {
-  margin: 5px 0;
+/*content*/
+.complaint-content {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
-.complaint-content p {
-  color: #6b7280;
-  font-size: 14px;
-  margin-bottom: 10px;
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
-.status {
-  padding: 6px 12px;
-  border-radius: 20px;
+.card-header h3 {
+  font-size: 16px;
+  color: #3a4660;
+}
+
+.description {
   font-size: 13px;
+  color: #845007;
+  line-height: 1.5;
+}
+
+/*status*/
+.status {
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 11px;
   font-weight: 600;
 }
 
 .status.pending {
-  background: #fef3c7;
-  color: #b45309;
+  background: #ffe0d2;
+  color: #845007;
 }
 
 .status.progress {
-  background: #dbeafe;
-  color: #1e40af;
+  background: #fcd5c4;
+  color: #3a4660;
 }
 
 .status.resolved {
-  background: #dcfce7;
+  background: #d8f3dc;
   color: #166534;
 }
 
-.loading {
-  color: #6b7280;
+/*delete button*/
+.delete-btn {
+  margin-top: 8px;
+  height: 36px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+
+  background: #ed8a63;
+  color: white;
+
+  transition: 0.3s ease;
 }
 
-.empty-state {
+.delete-btn:hover {
+  background: #845007;
+}
+
+/*loading*/
+.loading {
   text-align: center;
-  padding: 40px;
+  margin-top: 40px;
+  font-size: 14px;
+  color: #3a4660;
+}
+
+/*empty*/
+.empty-state {
+  max-width: 500px;
+  margin: auto;
+  background: white;
+  padding: 24px;
+  border-radius: 14px;
+  text-align: center;
+}
+
+.empty-state h3 {
+  color: #3a4660;
+  margin-bottom: 6px;
+}
+
+.empty-state p {
+  font-size: 13px;
+  color: #845007;
 }

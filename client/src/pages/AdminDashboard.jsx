@@ -21,7 +21,9 @@ const AdminDashboard = () => {
 
       const res = await axios.get(
         `${API}/api/complaints`,
-        { headers: { Authorization: `Bearer ${token}` } }
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
       );
 
       setComplaints(res.data);
@@ -32,24 +34,17 @@ const AdminDashboard = () => {
     }
   };
 
-  const activeComplaints = complaints.filter(
-    (c) =>
-      c.status !== "resolved" &&
-      (filter === "all" || c.wasteType === filter)
-  );
-
-  const archived = complaints.filter(
-    (c) => c.status === "resolved"
-  );
-
+  // 🔥 UPDATED ROUTE HERE
   const updateStatus = async (id, status) => {
     try {
       const token = localStorage.getItem("token");
 
       await axios.put(
-        `${API}/api/complaints/${id}`,
+        `${API}/api/complaints/${id}/status`,
         { status },
-        { headers: { Authorization: `Bearer ${token}` } }
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
       );
 
       fetchData();
@@ -58,53 +53,138 @@ const AdminDashboard = () => {
     }
   };
 
+  const activeComplaints = complaints.filter(
+    (c) =>
+      c.status !== "resolved" &&
+      (filter === "all" || c.wasteType === filter)
+  );
+
+  const archivedComplaints = complaints.filter(
+    (c) => c.status === "resolved"
+  );
+
+  const totalReports = complaints.length;
+  const pendingReports = complaints.filter(
+    (c) => c.status === "pending"
+  ).length;
+
+  const inProgressReports = complaints.filter(
+    (c) => c.status === "in-progress"
+  ).length;
+
+  const resolvedReports = archivedComplaints.length;
+
   return (
     <div className="admin-layout">
-      <AdminSidebar setFilter={setFilter} />
+      <AdminSidebar setFilter={setFilter} active={filter} />
 
       <div className="admin-content">
-        <h2>Active Complaints</h2>
+
+        {/* Header */}
+        <div className="admin-header">
+          <h1>AI Waste Control Center</h1>
+          <p>Monitor and manage civic waste reports.</p>
+        </div>
+
+        {/* Stats */}
+        <div className="admin-stats-grid">
+          <div className="admin-stat-card">
+            <h3>Total Reports</h3>
+            <p>{totalReports}</p>
+          </div>
+
+          <div className="admin-stat-card">
+            <h3>Pending</h3>
+            <p>{pendingReports}</p>
+          </div>
+
+          <div className="admin-stat-card">
+            <h3>In Progress</h3>
+            <p>{inProgressReports}</p>
+          </div>
+
+          <div className="admin-stat-card">
+            <h3>Resolved</h3>
+            <p>{resolvedReports}</p>
+          </div>
+        </div>
+
+        {/* Active Complaints */}
+        <h2>Active Complaints Management</h2>
 
         {loading ? (
-          <p>Loading...</p>
+          <p>Loading complaints...</p>
         ) : (
           <div className="complaint-grid">
             {activeComplaints.map((c) => (
               <div key={c._id} className="card">
                 <img src={c.imageUrl} alt="waste" />
-                <h3>{c.wasteType}</h3>
-                <p>{c.description}</p>
 
-                <select
-                  value={c.status}
-                  onChange={(e) =>
-                    updateStatus(c._id, e.target.value)
-                  }
-                >
-                  <option value="pending">Pending</option>
-                  <option value="in-progress">In Progress</option>
-                  <option value="resolved">Resolve</option>
-                </select>
+                <div className="card-content">
+                  <h3>{c.wasteType}</h3>
+
+                  <p className="description">
+                    <strong>Description:</strong>{" "}
+                    {c.description && c.description.trim() !== ""
+                      ? c.description
+                      : "Not Provided"}
+                  </p>
+
+                  <div className="card-bottom">
+                    <select
+                      value={c.status}
+                      onChange={(e) =>
+                        updateStatus(c._id, e.target.value)
+                      }
+                    >
+                      <option value="pending">Pending</option>
+                      <option value="in-progress">
+                        In Progress
+                      </option>
+                      <option value="resolved">
+                        Resolve
+                      </option>
+                    </select>
+                  </div>
+                </div>
               </div>
             ))}
           </div>
         )}
 
-        <h2 style={{ marginTop: "50px" }}>Archived</h2>
+        {/* Archived */}
+        <h2>Resolved & Archived Reports</h2>
 
         <div className="complaint-grid">
-          {archived.map((c) => (
+          {archivedComplaints.map((c) => (
             <div key={c._id} className="card">
               <img src={c.imageUrl} alt="waste" />
-              <h3>{c.wasteType}</h3>
-              <p>{c.description}</p>
+
+              <div className="card-content">
+                <h3>{c.wasteType}</h3>
+
+                <p className="description">
+                  <strong>Description:</strong>{" "}
+                  {c.description && c.description.trim() !== ""
+                    ? c.description
+                    : "Not Provided"}
+                </p>
+
+                <span className="resolved-badge">
+                  Resolved
+                </span>
+              </div>
             </div>
           ))}
         </div>
 
+        {/* Map */}
+        <h2>Live Complaint Map</h2>
+
         <div className="map-section">
           <ComplaintMap complaints={complaints} />
         </div>
+
       </div>
     </div>
   );

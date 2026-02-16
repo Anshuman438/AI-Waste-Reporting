@@ -26,41 +26,63 @@ const Register = () => {
   };
 
   return (
-    <div className="register-wrapper">
-      <div className="card register-card">
-        <h2>Create Account</h2>
+  <div className="register-wrapper">
+    <div className="register-card">
 
-        <input
-          type="text"
-          placeholder="Full Name"
-          onChange={(e) => setName(e.target.value)}
-        />
+      <h1 className="register-title">
+         SaFai <span>withAI</span>
+      </h1>
 
-        <input
-          type="email"
-          placeholder="Email"
-          onChange={(e) => setEmail(e.target.value)}
-        />
+      <h2>Create Account</h2>
 
-        <input
-          type="password"
-          placeholder="Password"
-          onChange={(e) => setPassword(e.target.value)}
-        />
+      <p className="register-subtext">
+        Start reporting waste with AI-powered tracking
+      </p>
 
-        <button className="btn-primary" onClick={handleRegister}>
+      <form onSubmit={handleRegister}>
+
+        <div className="input-group">
+          <input
+            type="text"
+            placeholder="Full Name"
+            onChange={(e) => setName(e.target.value)}
+            required
+          />
+        </div>
+
+        <div className="input-group">
+          <input
+            type="email"
+            placeholder="Email Address"
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+        </div>
+
+        <div className="input-group">
+          <input
+            type="password"
+            placeholder="Password"
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+        </div>
+
+        <button className="full-btn" type="submit">
           Register
         </button>
 
-        <p className="login-link">
-          Already have an account?{" "}
-          <span onClick={() => navigate("/login")}>
-            Login
-          </span>
-        </p>
-      </div>
-    </div>
-  );
-};
+      </form>
 
+      <p className="login-link">
+        Already have an account?{" "}
+        <span onClick={() => navigate("/login")}>
+          Login
+        </span>
+      </p>
+
+    </div>
+  </div>
+);
+};
 export default Register;

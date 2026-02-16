@@ -1,27 +1,100 @@
+/*layout*/
 .navbar {
-  background: white;
-  padding: 20px 50px;
+  background: #3a4660;
+  color: white;
+  padding: 12px 24px;
+
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid #e5e7eb;
+
+  position: relative;
 }
 
+/*logo*/
 .navbar h2 {
+  font-size: 18px;
   font-weight: 700;
-  font-size: 20px;
-  color: #f97316;
-}
-
-.nav-links button {
-  margin-left: 16px;
-  padding: 10px 18px;
-  border-radius: 12px;
-  border: none;
-  background: #f8fafc;
   cursor: pointer;
 }
 
+.navbar h2 span {
+  color: #ed8a63;
+}
+
+/*links*/
+.nav-links {
+  display: flex;
+  gap: 14px;
+}
+
+.nav-links button {
+  background: transparent;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: 0.3s ease;
+}
+
 .nav-links button:hover {
-  background: #fff7ed;
+  background: #ed8a63;
+}
+
+/*logout*/
+.btn-logout {
+  background: #ed8a63;
+  color: white;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: 0.3s ease;
+}
+
+.btn-logout:hover {
+  background: #845007;
+}
+
+/*mobile toggle*/
+.nav-toggle {
+  display: none;
+  position: fixed;
+  top: 12px;
+  right: 15px;
+  background: #3a4660;
+  color: white;
+  padding: 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  z-index: 1000;
+}
+
+/*responsive*/
+@media (max-width: 768px) {
+
+  .nav-toggle {
+    display: block;
+  }
+
+  .navbar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 16px;
+    display: none;
+  }
+
+  .navbar.open {
+    display: flex;
+  }
+
+  .nav-links {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .nav-links button,
+  .btn-logout {
+    width: 100%;
+  }
 }

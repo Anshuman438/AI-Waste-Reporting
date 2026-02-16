@@ -9,25 +9,55 @@ const MyComplaints = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const token = localStorage.getItem("token");
-
-        const res = await axios.get(
-          `${API}/api/complaints/my`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-
-        setComplaints(res.data);
-      } catch (error) {
-        console.error("Error fetching complaints:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchData();
   }, []);
+
+  const fetchData = async () => {
+    try {
+      const token = localStorage.getItem("token");
+
+      const res = await axios.get(
+        `${API}/api/complaints/my`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      setComplaints(res.data);
+    } catch (error) {
+      console.error("Error fetching complaints:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deleteComplaint = async (id) => {
+    const confirmDelete = window.confirm(
+      "Are you sure you want to remove this complaint?"
+    );
+
+    if (!confirmDelete) return;
+
+    try {
+      const token = localStorage.getItem("token");
+
+      await axios.delete(
+  `${API}/api/complaints/${id}`,
+  {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  }
+);
+
+
+      // remove from UI instantly
+      setComplaints((prev) =>
+        prev.filter((complaint) => complaint._id !== id)
+      );
+
+    } catch (error) {
+      console.error("Delete error:", error);
+    }
+  };
 
   const getStatusClass = (status) => {
     if (status === "pending") return "status pending";
@@ -36,33 +66,64 @@ const MyComplaints = () => {
     return "status";
   };
 
+  const formatStatusText = (status) => {
+    if (status === "in-progress") return "In Progress";
+    return status.charAt(0).toUpperCase() + status.slice(1);
+  };
+
   return (
     <div className="my-wrapper">
-      <h2>My Complaints</h2>
+
+      {/*header*/}
+      <div className="my-header-box">
+        <h1>My Complaint History</h1>
+        <p>Review and manage your submitted reports.</p>
+      </div>
 
       {loading ? (
-        <p className="loading">Loading your complaints...</p>
+        <div className="loading">Loading your complaints...</div>
       ) : complaints.length === 0 ? (
-        <div className="empty-state card">
-          <h3>No Complaints Yet</h3>
-          <p>You haven't submitted any waste reports.</p>
+        <div className="empty-state">
+          <h3>No Complaints Submitted</h3>
+          <p>You haven't reported any waste yet.</p>
         </div>
       ) : (
         <div className="my-grid">
           {complaints.map((c) => (
-            <div key={c._id} className="card complaint-card">
+            <div key={c._id} className="complaint-card">
+
               <img src={c.imageUrl} alt="waste" />
+
               <div className="complaint-content">
-                <h3>{c.wasteType}</h3>
-                <p>{c.description}</p>
-                <span className={getStatusClass(c.status)}>
-                  {c.status}
-                </span>
+
+                <div className="card-header">
+                  <h3>{c.wasteType}</h3>
+
+                  <span className={getStatusClass(c.status)}>
+                    {formatStatusText(c.status)}
+                  </span>
+                </div>
+
+                <p className="description">
+                  {c.description && c.description.trim() !== ""
+                    ? c.description
+                    : "No additional description provided."}
+                </p>
+
+                <button
+                  className="delete-btn"
+                  onClick={() => deleteComplaint(c._id)}
+                >
+                  Remove Complaint
+                </button>
+
               </div>
+
             </div>
           ))}
         </div>
       )}
+
     </div>
   );
 };

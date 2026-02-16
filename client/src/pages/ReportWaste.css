@@ -1,56 +1,140 @@
 .report-wrapper {
-  min-height: 100vh;
-  background: #f9fafb;
+  min-height: 100dvh;
+  background: #c9af98;
+
   display: flex;
   justify-content: center;
   align-items: center;
+
+  padding: 4vh 4vw;
 }
 
+/*card*/
 .report-card {
-  width: 450px;
-  padding: 30px;
-  text-align: center;
+  width: 100%;
+  max-width: 420px;
+
+  background: white;
+  padding: 28px;
+  border-radius: 16px;
+
+  box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
-.report-card input,
-.report-card textarea {
+/*heading*/
+.report-card h2 {
+  color: #3a4660;
+}
+
+.report-sub {
+  font-size: 13px;
+  color: #845007;
+}
+
+/*form*/
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-group label {
+  font-size: 13px;
+  color: #3a4660;
+  font-weight: 600;
+}
+
+/*inputs*/
+input[type="file"],
+textarea {
   width: 100%;
-  margin-top: 12px;
-  padding: 10px;
+  height: 42px;
+  padding: 0 12px;
   border-radius: 8px;
   border: 1px solid #ddd;
+  font-size: 14px;
+  box-sizing: border-box;
 }
 
-.preview-img {
-  margin-top: 15px;
+textarea {
+  height: 90px;
+  padding: 10px 12px;
+  resize: none;
+}
+
+input:focus,
+textarea:focus {
+  outline: none;
+  border-color: #ed8a63;
+}
+
+/*preview*/
+.preview-section img {
   width: 100%;
+  height: 220px;
+  object-fit: cover;
   border-radius: 12px;
 }
 
-.prediction {
-  margin-top: 10px;
-  font-weight: bold;
-  color: #f97316;
+/*prediction*/
+.prediction-box {
+  background: #ffe0d2;
+  padding: 10px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
 }
 
+.prediction-box span {
+  color: #ed8a63;
+}
+
+/*button*/
+.submit-btn {
+  width: 100%;
+  height: 42px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+
+  background: #ed8a63;
+  color: white;
+
+  transition: 0.3s ease;
+}
+
+.submit-btn:hover:not(:disabled) {
+  background: #845007;
+}
+
+.submit-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/*success*/
 .success-msg {
-  margin-top: 10px;
-  color: green;
-  font-weight: bold;
+  background: #d8f3dc;
+  padding: 10px;
+  border-radius: 8px;
+  font-size: 14px;
 }
 
+/*loader*/
 .loader {
-  margin: 15px auto;
-  border: 4px solid #f3f3f3;
-  border-top: 4px solid #f97316;
-  border-radius: 50%;
+  margin: 10px auto;
   width: 30px;
   height: 30px;
+  border: 3px solid #eee;
+  border-top: 3px solid #ed8a63;
+  border-radius: 50%;
   animation: spin 1s linear infinite;
 }
 
 @keyframes spin {
-  100% {
-    transform: rotate(360deg);
-  }
+  to { transform: rotate(360deg); }
 }

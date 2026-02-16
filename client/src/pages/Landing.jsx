@@ -8,23 +8,19 @@ const Landing = () => {
   return (
     <div className="landing-wrapper">
 
-      {/* NAV STYLE HERO */}
+      {/*hero*/}
       <section className="hero">
-
-        <div className="hero-left">
-          <span className="badge">AI Powered Civic Platform</span>
-
+        <div className="hero-content">
           <h1>
-            Smarter Waste <br />
-            <span>Cleaner Cities</span>
+            AI-Powered Waste <span>Management Platform</span>
           </h1>
 
           <p>
-            AI-driven waste reporting system with real-time tracking,
-            live analytics and smart administrative control.
+            Smart civic waste reporting with AI classification,
+            real-time tracking, and administrative control.
           </p>
 
-          <div className="hero-buttons">
+          <div className="hero-actions">
             <button
               className="btn-primary"
               onClick={() => navigate("/login")}
@@ -33,73 +29,64 @@ const Landing = () => {
             </button>
 
             <button
-              className="btn-outline"
+              className="btn-secondary"
               onClick={() => navigate("/report")}
             >
-              Report Now
+              Report Waste
             </button>
           </div>
-
-          <div className="hero-stats">
-            <div>
-              <h3>1200+</h3>
-              <p>Complaints Processed</p>
-            </div>
-            <div>
-              <h3>95%</h3>
-              <p>Resolution Rate</p>
-            </div>
-            <div>
-              <h3>24/7</h3>
-              <p>AI Monitoring</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="hero-right">
-          <div className="floating-card card">
-            <h4>Live Waste Detection</h4>
-            <p>Plastic detected in uploaded image</p>
-          </div>
-
-          <div className="floating-glow"></div>
-        </div>
-
-      </section>
-
-      {/* FEATURES */}
-      <section className="features">
-        <div className="feature-card card">
-          <h3>AI Classification</h3>
-          <p>
-            Automatic detection of plastic, metal and biodegradable waste.
-          </p>
-        </div>
-
-        <div className="feature-card card">
-          <h3>Real-Time Dashboard</h3>
-          <p>
-            Admin panel with complaint tracking, filters and maps.
-          </p>
-        </div>
-
-        <div className="feature-card card">
-          <h3>Analytics Insights</h3>
-          <p>
-            Visual charts and resolution performance metrics.
-          </p>
         </div>
       </section>
 
-      {/* FINAL CTA */}
-      <section className="cta">
-        <h2>Build a Cleaner Tomorrow</h2>
-        <button
-          className="btn-primary"
-          onClick={() => navigate("/login")}
-        >
-          Launch Dashboard
-        </button>
+      {/*features*/}
+      <section className="features-section">
+        <div className="section-header">
+          <h2>Core Capabilities</h2>
+          <p>Everything needed to manage civic waste efficiently.</p>
+        </div>
+
+        <div className="features-grid">
+
+          <div className="feature-box">
+            <h3>AI Waste Classification</h3>
+            <p>
+              Automatically detect plastic, metal, and biodegradable waste
+              using trained AI models.
+            </p>
+          </div>
+
+          <div className="feature-box">
+            <h3>Live Complaint Tracking</h3>
+            <p>
+              Track complaint progress from submission to resolution
+              in real time.
+            </p>
+          </div>
+
+          <div className="feature-box">
+            <h3>Admin Analytics Dashboard</h3>
+            <p>
+              Monitor reports, filter waste types, update status,
+              and view map insights.
+            </p>
+          </div>
+
+        </div>
+      </section>
+
+      {/*cta*/}
+      <section className="final-cta">
+        <div className="cta-box">
+          <h2>Build Smarter, Cleaner Cities</h2>
+          <p>Start managing waste with AI-driven intelligence.</p>
+
+          <button
+            className="btn-primary"
+            onClick={() => navigate("/register")}
+          >
+            Create Account
+          </button>
+        </div>
       </section>
 
     </div>

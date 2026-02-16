@@ -1,58 +1,145 @@
 .dashboard-wrapper {
-  min-height: 100vh;
-  background: #f5f5f3;
-  padding: 80px;
+  background: #c9af98;
+  min-height: 100dvh;
+  padding: 5vh 4vw;
 }
 
-.dashboard-header {
-  margin-bottom: 50px;
+/*header*/
+.dashboard-header-box {
+  max-width: 1100px;
+  margin: auto;
+  margin-bottom: 30px;
+
+  background: #3a4660;
+  padding: 28px;
+  border-radius: 16px;
+  color: white;
 }
 
-.dashboard-header h1 {
-  font-size: 34px;
+.dashboard-header-box h1 {
+  font-size: clamp(22px, 3vw, 30px);
+  margin-bottom: 6px;
+}
+
+.dashboard-header-box span {
+  color: #ed8a63;
+}
+
+.dashboard-header-box p {
+  font-size: 14px;
+  opacity: 0.9;
+}
+
+/*impact section*/
+.impact-section {
+  max-width: 1100px;
+  margin: auto;
+  margin-bottom: 40px;
+
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+}
+
+.impact-card {
+  background: white;
+  padding: 20px;
+  border-radius: 14px;
+  border-left: 5px solid #ed8a63;
+}
+
+.impact-card h3 {
+  color: #3a4660;
   margin-bottom: 8px;
 }
 
-.dashboard-header h1 span {
-  color: #f97316;
+.impact-card p {
+  font-size: 13px;
+  color: #845007;
+  line-height: 1.5;
 }
 
-.dashboard-header p {
-  color: #6b7280;
-}
-
+/*action grid*/
 .dashboard-grid {
+  max-width: 1100px;
+  margin: auto;
+  margin-bottom: 40px;
+
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 40px;
+  gap: 24px;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
 }
 
 .dashboard-card {
+  background: white;
+  border-radius: 16px;
+  padding: 22px;
   cursor: pointer;
-  padding: 30px;
+
+  border: 2px solid #3a4660;
+
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+
+  transition: 0.3s ease;
 }
 
 .dashboard-card:hover {
-  transform: translateY(-6px);
+  border-color: #ed8a63;
+  transform: translateY(-4px);
 }
 
 .card-icon {
-  background: #fff7ed;
-  color: #f97316;
-  width: 60px;
-  height: 60px;
-  border-radius: 16px;
+  background: #3a4660;
+  color: #ed8a63;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 20px;
 }
 
-.dashboard-card h3 {
+.card-content h3 {
+  margin-bottom: 6px;
+  color: #3a4660;
+}
+
+.card-content p {
+  font-size: 13px;
+  color: #845007;
+}
+
+/*eco info*/
+.eco-box {
+  max-width: 1100px;
+  margin: auto;
+
+  background: #3a4660;
+  color: white;
+  padding: 28px;
+  border-radius: 16px;
+}
+
+.eco-box h2 {
   margin-bottom: 10px;
 }
 
-.dashboard-card p {
-  color: #6b7280;
+.eco-box p {
   font-size: 14px;
+  line-height: 1.6;
+  opacity: 0.9;
+}
+
+/*responsive*/
+@media (max-width: 768px) {
+  .dashboard-wrapper {
+    padding: 4vh 6vw;
+  }
+
+  .dashboard-card {
+    flex-direction: column;
+  }
 }

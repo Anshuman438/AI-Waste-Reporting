@@ -59,11 +59,12 @@ const Login = () => {
 
   return (
     <div className="login-wrapper">
-      <div className="login-card card">
+      <div className="login-card">
 
         <h1 className="login-title">
-          Waste<span>AI</span>
-        </h1>
+   SaFai <span>withAI</span>
+</h1>
+
 
         <h2>Welcome Back</h2>
 

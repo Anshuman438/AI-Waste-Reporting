@@ -15,7 +15,6 @@ const ReportWaste = () => {
   const [success, setSuccess] = useState(false);
   const [model, setModel] = useState(null);
 
-  /* Load AI Model Once */
   useEffect(() => {
     const loadModel = async () => {
       const loadedModel = await tf.loadLayersModel("/model/model.json");
@@ -24,7 +23,6 @@ const ReportWaste = () => {
     loadModel();
   }, []);
 
-  /* Get GPS Location */
   useEffect(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -58,11 +56,8 @@ const ReportWaste = () => {
         .expandDims();
 
       const predictions = await model.predict(tensor).data();
-
       const classes = ["metal", "plastic", "biodegradable"];
-      const highestIndex = predictions.indexOf(
-        Math.max(...predictions)
-      );
+      const highestIndex = predictions.indexOf(Math.max(...predictions));
 
       setPrediction(classes[highestIndex]);
       setLoading(false);
@@ -81,15 +76,9 @@ const ReportWaste = () => {
     formData.append("location", JSON.stringify(location));
 
     try {
-      await axios.post(
-        `${API}/api/complaints`,
-        formData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      await axios.post(`${API}/api/complaints`, formData, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
       setSuccess(true);
       setFile(null);
@@ -104,20 +93,21 @@ const ReportWaste = () => {
 
   return (
     <div className="report-wrapper">
-      <div className="report-card card">
+      <div className="report-card">
 
         <h2>AI Waste Detection</h2>
         <p className="report-sub">
-          Upload an image and let AI classify the waste.
+          Upload an image and let AI classify the waste automatically.
         </p>
 
-        <input
-          type="file"
-          accept="image/*"
-          onChange={(e) =>
-            predictImage(e.target.files[0])
-          }
-        />
+        <div className="form-group">
+          <label>Upload Waste Image</label>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={(e) => predictImage(e.target.files[0])}
+          />
+        </div>
 
         {preview && (
           <div className="preview-section">
@@ -125,29 +115,25 @@ const ReportWaste = () => {
           </div>
         )}
 
-        {loading && (
-          <div className="loader"></div>
-        )}
+        {loading && <div className="loader"></div>}
 
         {prediction && (
           <div className="prediction-box">
-            AI Detected:
-            <span className="highlight">
-              {prediction}
-            </span>
+            AI Detected: <span>{prediction}</span>
           </div>
         )}
 
-        <textarea
-          placeholder="Add additional description..."
-          value={description}
-          onChange={(e) =>
-            setDescription(e.target.value)
-          }
-        />
+        <div className="form-group">
+          <label>Description (Optional)</label>
+          <textarea
+            placeholder="Add additional details..."
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+          />
+        </div>
 
         <button
-          className="btn-primary"
+          className="submit-btn"
           disabled={!prediction || loading}
           onClick={handleSubmit}
         >
@@ -156,7 +142,7 @@ const ReportWaste = () => {
 
         {success && (
           <div className="success-msg">
-            Complaint submitted successfully 🎉
+            Complaint submitted successfully 
           </div>
         )}
 
