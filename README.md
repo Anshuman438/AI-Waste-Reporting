@@ -3,7 +3,7 @@
 A full-stack MERN civic-tech platform that uses AI-powered image classification to streamline urban waste reporting and management.
 
 🌍 **Live Demo:**  
-https://ai-waste-reporting-1.onrender.com  
+https://ai-waste-reporting.vercel.app/ 
 
 ---
 
