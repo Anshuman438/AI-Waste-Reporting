@@ -6,7 +6,11 @@ html, body {
 /*layout*/
 .register-wrapper {
   height: 100dvh;
-  background: #c9af98;
+  min-height: 100vh;
+
+  background:
+    linear-gradient(rgba(10, 23, 51, 0.65), rgba(10, 23, 51, 0.65)),
+    url("../assets/waste1.jpg") no-repeat center center / cover;
 
   display: flex;
   justify-content: center;
@@ -20,7 +24,7 @@ html, body {
   width: 100%;
   max-width: 380px;
 
-  background: white;
+  background:#ffffff;
   padding: 2rem;
   border-radius: 16px;
 
@@ -33,7 +37,8 @@ html, body {
 
 /*title*/
 .register-title {
-  font-size: 1.4rem;
+  align-self: center;
+  font-size: 1.8rem;
   font-weight: 700;
   color: #3a4660;
 }
@@ -43,6 +48,8 @@ html, body {
 }
 
 .register-card h2 {
+  margin-top: 0;
+  align-self:center ;
   font-size: 1rem;
   color: #845007;
 }

@@ -34,7 +34,7 @@ const AdminDashboard = () => {
     }
   };
 
-  // 🔥 UPDATED ROUTE HERE
+  //  UPDATED ROUTE HERE
   const updateStatus = async (id, status) => {
     try {
       const token = localStorage.getItem("token");
@@ -113,7 +113,7 @@ const AdminDashboard = () => {
         <h2>Active Complaints Management</h2>
 
         {loading ? (
-          <p>Loading complaints...</p>
+          <p>wait karo bhai load kar rha thoda time do ...</p>
         ) : (
           <div className="complaint-grid">
             {activeComplaints.map((c) => (
@@ -125,9 +125,7 @@ const AdminDashboard = () => {
 
                   <p className="description">
                     <strong>Description:</strong>{" "}
-                    {c.description && c.description.trim() !== ""
-                      ? c.description
-                      : "Not Provided"}
+                    {c.description && c.description.trim() !== ""? c.description: "Not Provided"}
                   </p>
 
                   <div className="card-bottom">
@@ -165,9 +163,7 @@ const AdminDashboard = () => {
 
                 <p className="description">
                   <strong>Description:</strong>{" "}
-                  {c.description && c.description.trim() !== ""
-                    ? c.description
-                    : "Not Provided"}
+                  {c.description && c.description.trim() !== ""? c.description: "Not Provided"}
                 </p>
 
                 <span className="resolved-badge">

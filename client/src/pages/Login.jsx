@@ -58,7 +58,7 @@ const Login = () => {
   };
 
   return (
-    <div className="login-wrapper">
+    <div className="login-wrapper" img="waste1.jpg">
       <div className="login-card">
 
         <h1 className="login-title">

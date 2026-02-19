@@ -1,5 +1,8 @@
 .dashboard-wrapper {
-  background: #c9af98;
+  /*background: #c9af98;*/
+   background:
+    linear-gradient(rgba(201, 175, 152, 0.9), rgba(201, 175, 152, 0.9)),
+    url("../assets/waste1.jpg") no-repeat center center / cover;
   min-height: 100dvh;
   padding: 5vh 4vw;
 }

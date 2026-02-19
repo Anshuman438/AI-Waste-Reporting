@@ -93,9 +93,9 @@ const ReportWaste = () => {
 
   return (
     <div className="report-wrapper">
-      <div className="report-card">
-
-        <h2>AI Waste Detection</h2>
+      <div className="report-card"> 
+      <h2 className="main-logo">SaFai <span>withAI</span></h2>
+        <h4>AI Waste Detection</h4>
         <p className="report-sub">
           Upload an image and let AI classify the waste automatically.
         </p>

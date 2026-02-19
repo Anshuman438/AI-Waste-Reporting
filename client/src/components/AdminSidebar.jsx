@@ -23,7 +23,7 @@ const AdminSidebar = ({ setFilter, active }) => {
 
         {/*logo*/}
         <div className="sidebar-logo" onClick={() => navigate("/admin")}>
-          CleanAI <span>Sentinel</span>
+          SaFai <span>withAI</span>
           <p className="admin-badge">Admin Panel</p>
         </div>
 
