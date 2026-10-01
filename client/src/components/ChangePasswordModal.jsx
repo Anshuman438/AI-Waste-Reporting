@@ -12,7 +12,7 @@ import {
 } from "react-icons/fi";
 import "./ChangePasswordModal.css";
 
-const API = import.meta.env.VITE_API_URL;
+import { API } from "../config/api";
 
 const ChangePasswordModal = ({ isOpen, onClose }) => {
   const [currentPassword, setCurrentPassword] = useState("");

@@ -31,7 +31,7 @@ import ComplaintMap from "../components/ComplaintMap";
 import heroBgImg from "../assets/hero_bg_panoramic.png";
 import "./Landing.css";
 
-const API = import.meta.env.VITE_API_URL;
+import { API } from "../config/api";
 
 const Landing = () => {
   const navigate = useNavigate();

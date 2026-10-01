@@ -14,7 +14,7 @@ import {
 import { LuLeaf, LuRecycle, LuSparkles } from "react-icons/lu";
 import "./UserDashboard.css";
 
-const API = import.meta.env.VITE_API_URL;
+import { API } from "../config/api";
 
 const UserDashboard = () => {
   const navigate = useNavigate();

@@ -18,7 +18,7 @@ import {
 import { LuLeaf, LuSparkles, LuCrown } from "react-icons/lu";
 import "./MyComplaints.css";
 
-const API = import.meta.env.VITE_API_URL;
+import { API } from "../config/api";
 
 // High quality initial user reports
 const defaultUserComplaints = [

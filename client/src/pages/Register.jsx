@@ -15,7 +15,7 @@ import { LuLeaf } from "react-icons/lu";
 import GoogleAuthButton from "../components/GoogleAuthButton";
 import "./Register.css";
 
-const API = import.meta.env.VITE_API_URL;
+import { API } from "../config/api";
 
 const Register = () => {
   const navigate = useNavigate();

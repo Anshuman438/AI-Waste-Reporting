@@ -35,7 +35,7 @@ import "./AdminDashboard.css";
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
-const API = import.meta.env.VITE_API_URL;
+import { API } from "../config/api";
 
 // Comprehensive initial civic reports dataset
 const defaultMockComplaints = [
