@@ -34,6 +34,17 @@ app.get("/health", (req, res) => {
   res.status(200).json({ status: "ok", message: "safAI API running successfully" });
 });
 
+// Live Database Diagnostic & Auto-Provisioning endpoint
+const { checkTiDBStatus } = require("./config/tidb");
+app.get("/api/test-db", async (req, res) => {
+  const result = await checkTiDBStatus();
+  return res.status(result.connected ? 200 : 500).json(result);
+});
+app.get("/test-db", async (req, res) => {
+  const result = await checkTiDBStatus();
+  return res.status(result.connected ? 200 : 500).json(result);
+});
+
 // Dual mounting to handle both standard and serverless rewrites
 app.use("/api/auth", authRoutes);
 app.use("/auth", authRoutes);

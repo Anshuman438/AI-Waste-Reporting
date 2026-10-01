@@ -291,9 +291,67 @@ const tidbDeleteComplaint = async (id) => {
   }
 };
 
+const checkTiDBStatus = async () => {
+  const dbUrl = process.env.DATABASE_URL || process.env.TIDB_DATABASE_URL;
+  if (!dbUrl) {
+    return {
+      connected: false,
+      message: "DATABASE_URL is not set in environment variables.",
+      hint: "Add DATABASE_URL in Vercel Settings -> Environment Variables"
+    };
+  }
+
+  const conn = getTiDB();
+  if (!conn) {
+    return {
+      connected: false,
+      message: "Failed to create TiDB connection instance from DATABASE_URL."
+    };
+  }
+
+  try {
+    // 1. Ensure tables exist
+    await ensureTables(conn);
+
+    // 2. Fetch table list
+    const tables = await conn.execute(`SHOW TABLES`);
+
+    // 3. Fetch counts
+    let userCount = 0;
+    let complaintCount = 0;
+
+    try {
+      const uRows = await conn.execute(`SELECT COUNT(*) as count FROM users`);
+      userCount = uRows[0]?.count || 0;
+    } catch (e) {}
+
+    try {
+      const cRows = await conn.execute(`SELECT COUNT(*) as count FROM complaints`);
+      complaintCount = cRows[0]?.count || 0;
+    } catch (e) {}
+
+    return {
+      connected: true,
+      message: "TiDB Cloud Serverless database is active and connected!",
+      tables: tables || [],
+      stats: {
+        users: userCount,
+        complaints: complaintCount
+      }
+    };
+  } catch (err) {
+    return {
+      connected: false,
+      message: "TiDB Connection Error: " + err.message,
+      hint: "Verify that your TiDB cluster is running and your connection string password is correct."
+    };
+  }
+};
+
 module.exports = {
   getTiDB,
   initTiDB,
+  checkTiDBStatus,
   tidbFindUserByEmail,
   tidbFindUserById,
   tidbCreateUser,
