@@ -3,7 +3,7 @@ import axios from "axios";
 import "./GoogleAuthButton.css";
 
 const API = import.meta.env.VITE_API_URL;
-const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || import.meta.env.GOOGLE_CLIENT_ID;
 
 const GoogleAuthButton = ({ onSuccess, disabled, text = "Continue with Google" }) => {
   const [loading, setLoading] = useState(false);
