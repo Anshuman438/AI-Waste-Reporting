@@ -37,94 +37,9 @@ ChartJS.register(ArcElement, Tooltip, Legend);
 
 import { API } from "../config/api";
 
-// Comprehensive initial civic reports dataset
-const defaultMockComplaints = [
-  {
-    _id: "adm-101",
-    wasteType: "plastic",
-    description: "Overflowing plastic bottle disposal crate near Central Library & Canteen walkway.",
-    imageUrl: "https://images.unsplash.com/photo-1530587191325-3db32d826c18?w=500&auto=format&fit=crop&q=80",
-    status: "pending",
-    location: { lat: 22.5726, lng: 88.3639 },
-    locationName: "Central Library Walkway, Sector 3",
-    reportedBy: { name: "Aarav Sharma", email: "aarav@student.edu" },
-    createdAt: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
-    aiConfidence: 96.4
-  },
-  {
-    _id: "adm-102",
-    wasteType: "metal",
-    description: "Discarded rusted iron rebars and broken tin sheets obstructing pedestrian cycling track.",
-    imageUrl: "https://images.unsplash.com/photo-1563986768609-322da13575f3?w=500&auto=format&fit=crop&q=80",
-    status: "in-progress",
-    location: { lat: 22.5801, lng: 88.3752 },
-    locationName: "Hostel Block 4, North Gate Road",
-    reportedBy: { name: "Priya Patel", email: "priya@safai.org" },
-    createdAt: new Date(Date.now() - 1000 * 60 * 180).toISOString(),
-    aiConfidence: 91.8
-  },
-  {
-    _id: "adm-103",
-    wasteType: "biodegradable",
-    description: "Heavy food waste and wet compost heap overflowing after university food festival.",
-    imageUrl: "https://images.unsplash.com/photo-1605600659908-0ef719419d41?w=500&auto=format&fit=crop&q=80",
-    status: "pending",
-    location: { lat: 22.5675, lng: 88.3512 },
-    locationName: "Food Court Lawn Zone B",
-    reportedBy: { name: "Rohan Mukherjee", email: "rohan@alumni.org" },
-    createdAt: new Date(Date.now() - 1000 * 60 * 110).toISOString(),
-    aiConfidence: 94.2
-  },
-  {
-    _id: "adm-104",
-    wasteType: "plastic",
-    description: "Unsegregated polythene bags, packaging films, and bubble wrap behind auditorium stage.",
-    imageUrl: "https://images.unsplash.com/photo-1618477461853-cf6ed80faba5?w=500&auto=format&fit=crop&q=80",
-    status: "in-progress",
-    location: { lat: 22.5855, lng: 88.3610 },
-    locationName: "Main Auditorium Rear Access",
-    reportedBy: { name: "Ananya Roy", email: "ananya@safai.org" },
-    createdAt: new Date(Date.now() - 1000 * 60 * 320).toISOString(),
-    aiConfidence: 89.5
-  },
-  {
-    _id: "adm-105",
-    wasteType: "metal",
-    description: "Aluminum soda beverage cans and food packaging foil piled near basketball court.",
-    imageUrl: "https://images.unsplash.com/photo-1595278069441-2cf29f8005a4?w=500&auto=format&fit=crop&q=80",
-    status: "resolved",
-    location: { lat: 22.5699, lng: 88.3780 },
-    locationName: "Sports Complex Court 2",
-    reportedBy: { name: "Karan Singh", email: "karan@safai.org" },
-    createdAt: new Date(Date.now() - 1000 * 60 * 600).toISOString(),
-    aiConfidence: 98.1
-  },
-  {
-    _id: "adm-106",
-    wasteType: "biodegradable",
-    description: "Dry leaf litter and trimmed tree branches cleared and collected into compost bin.",
-    imageUrl: "https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=500&auto=format&fit=crop&q=80",
-    status: "resolved",
-    location: { lat: 22.5760, lng: 88.3490 },
-    locationName: "Botanical Garden South Path",
-    reportedBy: { name: "Sunita Verma", email: "sunita@eco.net" },
-    createdAt: new Date(Date.now() - 1000 * 60 * 950).toISOString(),
-    aiConfidence: 95.0
-  }
-];
-
 const AdminDashboard = () => {
   const navigate = useNavigate();
-  const [complaints, setComplaints] = useState(() => {
-    const saved = localStorage.getItem("admin_complaints_data");
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      } catch (e) {}
-    }
-    return defaultMockComplaints;
-  });
+  const [complaints, setComplaints] = useState([]);
 
   const [filter, setFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -132,11 +47,6 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(false);
   const [updatingId, setUpdatingId] = useState(null);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
-
-  // Sync to local storage whenever complaints state updates
-  useEffect(() => {
-    localStorage.setItem("admin_complaints_data", JSON.stringify(complaints));
-  }, [complaints]);
 
   useEffect(() => {
     fetchData();

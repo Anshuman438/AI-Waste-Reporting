@@ -4,7 +4,8 @@ const jwt = require("jsonwebtoken");
 const { 
   tidbFindUserByEmail, 
   tidbCreateUser, 
-  tidbUpdateUserPassword 
+  tidbUpdateUserPassword,
+  tidbGetAllUsers 
 } = require("../config/tidb");
 
 const JWT_SECRET = process.env.JWT_SECRET || "safai_super_secret_jwt_key_2026_green_future_984392472";
@@ -377,3 +378,47 @@ exports.changePassword = async (req, res) => {
     return res.status(500).json({ message: "Failed to update password: " + error.message });
   }
 };
+
+// ======================
+// ADMIN: GET ALL REGISTERED USERS
+// ======================
+exports.getAllUsers = async (req, res) => {
+  try {
+    let allUsers = [];
+
+    // 1. TiDB Cloud
+    try {
+      const tidbUsers = await tidbGetAllUsers();
+      if (tidbUsers && Array.isArray(tidbUsers)) {
+        allUsers.push(...tidbUsers);
+      }
+    } catch (e) {}
+
+    // 2. MongoDB
+    try {
+      if (User && User.find) {
+        const mongoUsers = await User.find().select("-password").sort({ createdAt: -1 });
+        if (mongoUsers && Array.isArray(mongoUsers)) {
+          for (const mu of mongoUsers) {
+            const exists = allUsers.some(u => String(u.email || "").toLowerCase() === String(mu.email || "").toLowerCase());
+            if (!exists) {
+              allUsers.push({
+                id: String(mu._id),
+                name: mu.name,
+                email: mu.email,
+                role: mu.role || "user",
+                created_at: mu.createdAt
+              });
+            }
+          }
+        }
+      }
+    } catch (e) {}
+
+    return res.status(200).json(allUsers);
+  } catch (error) {
+    console.error("Get All Users Error:", error);
+    return res.status(500).json({ message: "Failed to retrieve registered users" });
+  }
+};
+

@@ -20,79 +20,43 @@ import "./MyComplaints.css";
 
 import { API } from "../config/api";
 
-// High quality initial user reports
-const defaultUserComplaints = [
-  {
-    _id: "usr-c1",
-    wasteType: "plastic",
-    description: "Discarded plastic packaging and water bottles piled outside cafeteria recycling dock.",
-    imageUrl: "https://images.unsplash.com/photo-1530587191325-3db32d826c18?w=500&auto=format&fit=crop&q=80",
-    status: "in-progress",
-    location: { lat: 22.5726, lng: 88.3639 },
-    locationName: "Campus Canteen East Walkway",
-    createdAt: new Date(Date.now() - 1000 * 60 * 120).toISOString(),
-    aiConfidence: 96,
-    xpReward: 50
-  },
-  {
-    _id: "usr-c2",
-    wasteType: "metal",
-    description: "Crushed soda beverage cans and snack wrappers left near the main football pavilion.",
-    imageUrl: "https://images.unsplash.com/photo-1563986768609-322da13575f3?w=500&auto=format&fit=crop&q=80",
-    status: "pending",
-    location: { lat: 22.5801, lng: 88.3752 },
-    locationName: "Sports Complex Pavilion Zone",
-    createdAt: new Date(Date.now() - 1000 * 60 * 35).toISOString(),
-    aiConfidence: 92,
-    xpReward: 50
-  },
-  {
-    _id: "usr-c3",
-    wasteType: "biodegradable",
-    description: "Fallen tree branches and food box waste accumulated after weekend sports meet.",
-    imageUrl: "https://images.unsplash.com/photo-1605600659908-0ef719419d41?w=500&auto=format&fit=crop&q=80",
-    status: "resolved",
-    location: { lat: 22.5675, lng: 88.3512 },
-    locationName: "Botanical Path Lawn B",
-    createdAt: new Date(Date.now() - 1000 * 60 * 1440).toISOString(),
-    aiConfidence: 95,
-    xpReward: 50
-  }
-];
-
 const MyComplaints = () => {
   const navigate = useNavigate();
 
-  const [complaints, setComplaints] = useState(() => {
-    const saved = localStorage.getItem("user_complaints_data");
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      } catch (e) {}
-    }
-    return defaultUserComplaints;
-  });
-
+  const [complaints, setComplaints] = useState([]);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("all");
   const [deleteModalId, setDeleteModalId] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
-    localStorage.setItem("user_complaints_data", JSON.stringify(complaints));
-  }, [complaints]);
-
-  useEffect(() => {
     fetchData();
+
+    // Auto-refresh when new complaint is reported
+    const handleSync = () => {
+      fetchData(true);
+    };
+
+    window.addEventListener("new_complaint_reported", handleSync);
+    window.addEventListener("storage", handleSync);
+
+    const interval = setInterval(() => {
+      fetchData(true);
+    }, 5000);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("new_complaint_reported", handleSync);
+      window.removeEventListener("storage", handleSync);
+    };
   }, []);
 
-  const fetchData = async () => {
-    setLoading(true);
+  const fetchData = async (isBackground = false) => {
+    if (!isBackground) setLoading(true);
     try {
       const token = localStorage.getItem("token");
       if (!token) {
-        setLoading(false);
+        if (!isBackground) setLoading(false);
         return;
       }
 
@@ -100,13 +64,13 @@ const MyComplaints = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      if (res.data && Array.isArray(res.data) && res.data.length > 0) {
+      if (res.data && Array.isArray(res.data)) {
         setComplaints(res.data);
       }
     } catch (error) {
-      console.log("Using cached/demo civic reports for current citizen");
+      console.log("Fetching user complaints note:", error.message);
     } finally {
-      setLoading(false);
+      if (!isBackground) setLoading(false);
     }
   };
 

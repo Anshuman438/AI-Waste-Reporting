@@ -16,10 +16,11 @@ let inMemoryComplaints = [];
 // ======================
 const createComplaint = async (req, res) => {
   try {
-    const { wasteType, description, location } = req.body;
+    const { wasteType, description, location, image: bodyImage, imageUrl: bodyImageUrl } = req.body;
 
-    let imageUrl = "https://images.unsplash.com/photo-1530587191325-3db32d826c18?w=500&auto=format&fit=crop&q=80";
+    let imageUrl = bodyImageUrl || bodyImage || "https://images.unsplash.com/photo-1530587191325-3db32d826c18?w=500&auto=format&fit=crop&q=80";
 
+    // Handle Multipart file upload
     if (req.file) {
       if (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY) {
         try {
@@ -41,35 +42,37 @@ const createComplaint = async (req, res) => {
       }
     }
 
-    let parsedLocation = { lat: 22.5726, lng: 88.3639, address: "Reported Civic Area" };
+    // Parse coordinates & location
+    let parsedLocation = { lat: 22.5726, lng: 88.3639, address: "Civic Reported Area" };
     if (location) {
       try {
         parsedLocation = typeof location === "string" ? JSON.parse(location) : location;
       } catch (e) {
-        parsedLocation = { lat: 22.5726, lng: 88.3639, address: "Reported Civic Area" };
+        parsedLocation = { lat: 22.5726, lng: 88.3639, address: "Civic Reported Area" };
       }
     }
 
-    const reporterId = req.user?._id || req.user?.id || "user-" + Date.now();
+    const reporterId = req.user?._id || req.user?.id || "usr-" + Date.now();
     const reporterName = req.user?.name || "Citizen Reporter";
     const reporterEmail = req.user?.email || "citizen@safai.org";
 
     let savedComplaint = null;
 
-    // 1. Save to TiDB Cloud
+    // 1. Insert into TiDB Cloud Serverless
     try {
       const tidbResult = await tidbInsertComplaint({
         imageUrl,
-        wasteType: wasteType || "plastic",
+        wasteType: wasteType || "mixed",
         description: description || "Civic waste reported via safAI.",
         lat: parsedLocation.lat,
         lng: parsedLocation.lng,
-        locationName: parsedLocation.address || "Reported Location",
+        locationName: parsedLocation.address || "Civic Location",
         status: "pending",
         reported_by_id: reporterId,
         reported_by_name: reporterName,
         reported_by_email: reporterEmail,
       });
+
       if (tidbResult) {
         savedComplaint = tidbResult;
       }
@@ -77,30 +80,44 @@ const createComplaint = async (req, res) => {
       console.warn("TiDB complaint save note:", tidbErr.message);
     }
 
-    // 2. Save to MongoDB
+    // 2. Insert into MongoDB if available
     try {
       const mongoResult = await Complaint.create({
         imageUrl,
-        wasteType: wasteType || "plastic",
+        wasteType: wasteType || "mixed",
         description: description || "Civic waste reported via safAI.",
         location: parsedLocation,
         reportedBy: reporterId,
         status: "pending"
       });
       if (!savedComplaint && mongoResult) {
-        savedComplaint = mongoResult;
+        savedComplaint = {
+          _id: String(mongoResult._id),
+          id: String(mongoResult._id),
+          imageUrl,
+          wasteType: mongoResult.wasteType,
+          description: mongoResult.description,
+          location: parsedLocation,
+          status: "pending",
+          reportedBy: {
+            _id: reporterId,
+            name: reporterName,
+            email: reporterEmail
+          },
+          createdAt: mongoResult.createdAt || new Date().toISOString()
+        };
       }
     } catch (mongoErr) {
       console.warn("MongoDB complaint save note:", mongoErr.message);
     }
 
-    // 3. Fallback memory store
+    // 3. Fallback to memory item
     if (!savedComplaint) {
       savedComplaint = {
         _id: "comp-" + Date.now(),
         id: "comp-" + Date.now(),
         imageUrl,
-        wasteType: wasteType || "plastic",
+        wasteType: wasteType || "mixed",
         description: description || "Civic waste reported via safAI.",
         location: parsedLocation,
         status: "pending",
@@ -113,10 +130,9 @@ const createComplaint = async (req, res) => {
       };
     }
 
-    // Keep memory cache updated
     inMemoryComplaints.unshift(savedComplaint);
+    console.log(`✅ Complaint reported by [${reporterEmail}]: ${savedComplaint._id || savedComplaint.id}`);
 
-    console.log("✅ Waste complaint created successfully:", savedComplaint._id || savedComplaint.id);
     return res.status(201).json(savedComplaint);
 
   } catch (error) {
@@ -129,37 +145,78 @@ const createComplaint = async (req, res) => {
 
 
 // ======================
-// GET USER COMPLAINTS
+// GET LOGGED-IN USER COMPLAINTS (MY REPORTS)
 // ======================
 const getUserComplaints = async (req, res) => {
   try {
-    const userId = req.user?._id || req.user?.id;
-    const userEmail = req.user?.email;
+    const userId = String(req.user?._id || req.user?.id || "");
+    const userEmail = (req.user?.email || "").toLowerCase().trim();
 
-    // 1. TiDB
-    let complaints = await tidbGetUserComplaints(userEmail || userId);
+    let userComplaints = [];
+
+    // 1. TiDB Cloud
+    try {
+      const tidbRows = await tidbGetUserComplaints(userEmail || userId);
+      if (tidbRows && Array.isArray(tidbRows)) {
+        userComplaints.push(...tidbRows);
+      }
+    } catch (e) {
+      console.warn("TiDB GetUserComplaints note:", e.message);
+    }
 
     // 2. MongoDB
-    if (!complaints || complaints.length === 0) {
-      try {
-        const mongoComplaints = await Complaint.find({
-          reportedBy: userId,
+    try {
+      if (Complaint && Complaint.find) {
+        const mongoRows = await Complaint.find({
+          $or: [
+            { reportedBy: userId },
+            { "reportedBy.email": userEmail }
+          ]
         }).sort({ createdAt: -1 });
 
-        if (mongoComplaints && mongoComplaints.length > 0) {
-          complaints = mongoComplaints;
+        if (mongoRows && Array.isArray(mongoRows)) {
+          for (const m of mongoRows) {
+            const exists = userComplaints.some(c => String(c.id || c._id) === String(m._id));
+            if (!exists) {
+              userComplaints.push({
+                _id: String(m._id),
+                id: String(m._id),
+                imageUrl: m.imageUrl,
+                wasteType: m.wasteType,
+                description: m.description,
+                location: m.location,
+                status: m.status,
+                reportedBy: {
+                  _id: userId,
+                  name: req.user?.name,
+                  email: userEmail
+                },
+                createdAt: m.createdAt
+              });
+            }
+          }
         }
-      } catch (e) {}
-    }
+      }
+    } catch (e) {}
 
     // 3. Memory
-    if (!complaints || complaints.length === 0) {
-      complaints = inMemoryComplaints.filter(
-        c => c.reportedBy?._id === userId || c.reportedBy?.email === userEmail
-      );
+    for (const mem of inMemoryComplaints) {
+      const matches = 
+        (mem.reportedBy?.email && mem.reportedBy.email.toLowerCase() === userEmail) ||
+        (mem.reportedBy?._id && String(mem.reportedBy._id) === userId);
+
+      if (matches) {
+        const exists = userComplaints.some(c => String(c.id || c._id) === String(mem.id || mem._id));
+        if (!exists) {
+          userComplaints.push(mem);
+        }
+      }
     }
 
-    return res.status(200).json(complaints || []);
+    // Sort newest first
+    userComplaints.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+
+    return res.status(200).json(userComplaints);
 
   } catch (error) {
     console.error("Get User Complaints Error:", error);
@@ -169,39 +226,51 @@ const getUserComplaints = async (req, res) => {
 
 
 // ======================
-// ADMIN: GET ALL COMPLAINTS (FETCHES DIRECTLY TO ADMIN PORTAL)
+// ADMIN: GET ALL COMPLAINTS
 // ======================
 const getAllComplaints = async (req, res) => {
   try {
     let allComplaints = [];
 
-    // 1. Query TiDB Cloud
+    // 1. TiDB Cloud
     try {
       const tidbRows = await tidbGetAllComplaints();
       if (tidbRows && Array.isArray(tidbRows)) {
         allComplaints.push(...tidbRows);
       }
     } catch (e) {
-      console.warn("TiDB fetch all note:", e.message);
+      console.warn("TiDB GetAllComplaints note:", e.message);
     }
 
-    // 2. Query MongoDB
+    // 2. MongoDB
     try {
-      const mongoComplaints = await Complaint.find()
-        .populate("reportedBy", "name email")
-        .sort({ createdAt: -1 });
+      if (Complaint && Complaint.find) {
+        const mongoComplaints = await Complaint.find()
+          .populate("reportedBy", "name email")
+          .sort({ createdAt: -1 });
 
-      if (mongoComplaints && Array.isArray(mongoComplaints)) {
-        for (const mc of mongoComplaints) {
-          const exists = allComplaints.some(c => String(c.id || c._id) === String(mc._id));
-          if (!exists) {
-            allComplaints.push(mc);
+        if (mongoComplaints && Array.isArray(mongoComplaints)) {
+          for (const mc of mongoComplaints) {
+            const exists = allComplaints.some(c => String(c.id || c._id) === String(mc._id));
+            if (!exists) {
+              allComplaints.push({
+                _id: String(mc._id),
+                id: String(mc._id),
+                imageUrl: mc.imageUrl,
+                wasteType: mc.wasteType,
+                description: mc.description,
+                location: mc.location,
+                status: mc.status || "pending",
+                reportedBy: mc.reportedBy || { name: "Citizen Reporter", email: "citizen@safai.org" },
+                createdAt: mc.createdAt || new Date().toISOString()
+              });
+            }
           }
         }
       }
     } catch (e) {}
 
-    // 3. Include memory items
+    // 3. Memory
     for (const mem of inMemoryComplaints) {
       const exists = allComplaints.some(c => String(c.id || c._id) === String(mem.id || mem._id));
       if (!exists) {
@@ -229,19 +298,21 @@ const updateComplaintStatus = async (req, res) => {
     const { status } = req.body;
     const complaintId = req.params.id;
 
-    // Update in TiDB
+    // TiDB
     await tidbUpdateComplaintStatus(complaintId, status);
 
-    // Update in MongoDB
+    // MongoDB
     try {
-      const complaint = await Complaint.findById(complaintId);
-      if (complaint) {
-        complaint.status = status || complaint.status;
-        await complaint.save();
+      if (Complaint && Complaint.findById) {
+        const complaint = await Complaint.findById(complaintId);
+        if (complaint) {
+          complaint.status = status || complaint.status;
+          await complaint.save();
+        }
       }
     } catch (e) {}
 
-    // Update in Memory
+    // Memory
     const memItem = inMemoryComplaints.find(c => String(c._id || c.id) === String(complaintId));
     if (memItem) {
       memItem.status = status;
@@ -267,15 +338,17 @@ const deleteComplaint = async (req, res) => {
   try {
     const complaintId = req.params.id;
 
-    // Delete in TiDB
+    // TiDB
     await tidbDeleteComplaint(complaintId);
 
-    // Delete in MongoDB
+    // MongoDB
     try {
-      await Complaint.findByIdAndDelete(complaintId);
+      if (Complaint && Complaint.findByIdAndDelete) {
+        await Complaint.findByIdAndDelete(complaintId);
+      }
     } catch (e) {}
 
-    // Delete in Memory
+    // Memory
     inMemoryComplaints = inMemoryComplaints.filter(c => String(c._id || c.id) !== String(complaintId));
 
     return res.status(200).json({

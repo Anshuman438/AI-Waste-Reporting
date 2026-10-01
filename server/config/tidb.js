@@ -114,6 +114,18 @@ const tidbUpdateUserPassword = async (email, hashedPassword) => {
   }
 };
 
+const tidbGetAllUsers = async () => {
+  const conn = getTiDB();
+  if (!conn) return [];
+  try {
+    const rows = await conn.execute(`SELECT id, name, email, role, avatar, created_at FROM users ORDER BY created_at DESC`);
+    return rows && Array.isArray(rows) ? rows : [];
+  } catch (err) {
+    console.error("TiDB getAllUsers error:", err.message);
+    return [];
+  }
+};
+
 // Complaint Queries for TiDB
 const tidbInsertComplaint = async ({
   imageUrl,
@@ -267,6 +279,7 @@ module.exports = {
   tidbFindUserById,
   tidbCreateUser,
   tidbUpdateUserPassword,
+  tidbGetAllUsers,
   tidbInsertComplaint,
   tidbGetAllComplaints,
   tidbGetUserComplaints,
