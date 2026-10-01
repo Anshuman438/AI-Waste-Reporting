@@ -3,13 +3,22 @@ import axios from "axios";
 import bcrypt from "bcryptjs";
 import { API } from "../config/api";
 
-const getDatabaseUrl = () => {
+export const getDatabaseUrl = () => {
   return (
     import.meta.env.VITE_DATABASE_URL ||
     import.meta.env.DATABASE_URL ||
     import.meta.env.TIDB_DATABASE_URL ||
+    localStorage.getItem("safai_db_url") ||
     ""
   );
+};
+
+export const setCustomDatabaseUrl = (url) => {
+  if (url) {
+    localStorage.setItem("safai_db_url", url.trim());
+    cachedClient = null;
+    tablesInitialized = false;
+  }
 };
 
 // Cached connection instance
@@ -344,7 +353,7 @@ export const fetchUserComplaintsService = async (authToken, userEmail) => {
     return (
       (cleanEmail && repEmail === cleanEmail) ||
       (userId && repId === userId) ||
-      (!cleanEmail && !repEmail) // fallback match if guest
+      (!cleanEmail && !repEmail)
     );
   });
 

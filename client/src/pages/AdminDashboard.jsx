@@ -24,7 +24,9 @@ import {
   FiTruck,
   FiZap,
   FiPlusCircle,
-  FiKey
+  FiKey,
+  FiDatabase,
+  FiX
 } from "react-icons/fi";
 import { LuLeaf } from "react-icons/lu";
 import { useNavigate } from "react-router-dom";
@@ -38,7 +40,9 @@ ChartJS.register(ArcElement, Tooltip, Legend);
 import { API } from "../config/api";
 import { 
   fetchAllComplaintsService, 
-  updateComplaintStatusService 
+  updateComplaintStatusService,
+  getDatabaseUrl,
+  setCustomDatabaseUrl
 } from "../services/tidbService";
 
 const AdminDashboard = () => {
@@ -52,13 +56,19 @@ const AdminDashboard = () => {
   const [updatingId, setUpdatingId] = useState(null);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
 
+  // TiDB Cloud Live Status & Diagnostic Modal
+  const [showDbModal, setShowDbModal] = useState(false);
+  const [dbUrlInput, setDbUrlInput] = useState(getDatabaseUrl() || "");
+  const [dbTestResult, setDbTestResult] = useState(null);
+  const [dbTesting, setDbTesting] = useState(false);
+
   useEffect(() => {
     fetchData();
 
-    // Auto-fetch polling every 4 seconds for real-time reporting sync
+    // Auto-fetch polling every 3 seconds for real-time reporting sync
     const interval = setInterval(() => {
       fetchData(true);
-    }, 4000);
+    }, 3000);
 
     const handleNewReport = () => {
       fetchData(true);
@@ -106,6 +116,30 @@ const AdminDashboard = () => {
     }
   };
 
+  const handleTestDatabase = async () => {
+    setDbTesting(true);
+    setDbTestResult(null);
+
+    // Save custom URL if entered
+    if (dbUrlInput) {
+      setCustomDatabaseUrl(dbUrlInput);
+    }
+
+    try {
+      const res = await axios.get(`${API}/api/test-db`, { timeout: 7000 });
+      setDbTestResult(res.data);
+    } catch (err) {
+      setDbTestResult({
+        connected: false,
+        message: err.response?.data?.message || err.message || "Could not reach database check endpoint.",
+        hint: "Make sure DATABASE_URL is added in Vercel / .env."
+      });
+    } finally {
+      setDbTesting(false);
+      fetchData();
+    }
+  };
+
   // Filter complaints based on sidebar wasteType + status + search query
   const filteredList = complaints.filter((c) => {
     const matchesCategory =
@@ -121,6 +155,7 @@ const AdminDashboard = () => {
       !searchQuery ||
       c.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       c.wasteType?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      c.location?.address?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       c.locationName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       c.reportedBy?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       c.reportedBy?.email?.toLowerCase().includes(searchQuery.toLowerCase());
@@ -221,6 +256,20 @@ const AdminDashboard = () => {
           </div>
 
           <div className="admin-header-actions">
+            <button 
+              type="button"
+              className="btn-secondary btn-db-trigger"
+              onClick={() => {
+                setShowDbModal(true);
+                handleTestDatabase();
+              }}
+              title="Inspect TiDB Cloud Database Connection"
+              style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
+            >
+              <FiDatabase size={15} />
+              <span>TiDB Status</span>
+            </button>
+
             <button 
               type="button"
               className="btn-secondary btn-pwd-trigger" 
@@ -331,190 +380,230 @@ const AdminDashboard = () => {
             />
           </div>
 
-          <div className="filter-select-group">
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="admin-select"
+          <div className="toolbar-status-filters">
+            <button
+              type="button"
+              className={`filter-chip ${statusFilter === "all" ? "active" : ""}`}
+              onClick={() => setStatusFilter("all")}
             >
-              <option value="all">All Statuses ({filteredList.length})</option>
-              <option value="pending">⏳ Pending Triage</option>
-              <option value="in-progress">🚚 In Progress</option>
-              <option value="resolved">✅ Resolved</option>
-            </select>
+              All Incidents ({complaints.length})
+            </button>
+            <button
+              type="button"
+              className={`filter-chip pending ${statusFilter === "pending" ? "active" : ""}`}
+              onClick={() => setStatusFilter("pending")}
+            >
+              Pending ({pendingCount})
+            </button>
+            <button
+              type="button"
+              className={`filter-chip progress ${statusFilter === "in-progress" ? "active" : ""}`}
+              onClick={() => setStatusFilter("in-progress")}
+            >
+              In Progress ({inProgressCount})
+            </button>
+            <button
+              type="button"
+              className={`filter-chip resolved ${statusFilter === "resolved" ? "active" : ""}`}
+              onClick={() => setStatusFilter("resolved")}
+            >
+              Resolved ({resolvedCount})
+            </button>
           </div>
         </div>
 
-        {/* Active Complaints Grid */}
-        <div className="admin-content-section">
-          <div className="section-title-wrap-left">
-            <h2>Active Complaints Queue ({activeComplaints.length})</h2>
-            <p>Review incoming citizen reports and dispatch sanitation crews.</p>
+        {/* Incidents Table / Cards Grid */}
+        <div className="admin-table-container">
+          <div className="table-header-info">
+            <h3>Registered Incidents ({filteredList.length})</h3>
+            <span className="table-subtext">Click on any dropdown to update municipal resolution status in real time.</span>
           </div>
 
-          {loading ? (
-            <div className="admin-loading-indicator">
-              <div className="btn-spinner"></div>
-              <span>Fetching complaint telemetry...</span>
+          {loading && complaints.length === 0 ? (
+            <div className="table-loading-state">
+              <div className="royal-spinner"></div>
+              <p>Fetching incident feed from TiDB Cloud database...</p>
             </div>
-          ) : activeComplaints.length === 0 ? (
-            <div className="admin-empty-box">
-              <FiCheckCircle size={38} className="empty-green-icon" />
-              <h3>Queue Fully Cleared!</h3>
-              <p>No active complaints match your current filter criteria.</p>
-              <button 
-                type="button" 
-                className="btn-seed-data-link"
-                onClick={() => fetchData()}
-              >
-                Refresh Live Database
-              </button>
+          ) : filteredList.length === 0 ? (
+            <div className="admin-empty-state">
+              <FiCheckCircle size={40} className="empty-icon" />
+              <h4>No matching incidents found</h4>
+              <p>All clean! There are no reports matching your current filter criteria.</p>
             </div>
           ) : (
-            <div className="admin-complaints-grid">
-              {activeComplaints.map((c) => (
-                <div key={c._id} className="admin-case-card animate-fade-in">
-                  
-                  <div className="case-img-container">
-                    <img src={c.imageUrl} alt="Waste Incident" className="case-img" />
-                    <div className="case-category-pill">
-                      <span className={`badge-category badge-${c.wasteType?.toLowerCase()}`}>
-                        {c.wasteType}
+            <div className="incident-cards-list">
+              {filteredList.map((complaint) => {
+                const compId = complaint._id || complaint.id;
+                const wasteType = (complaint.wasteType || "mixed").toLowerCase();
+
+                return (
+                  <div key={compId} className={`incident-row-card status-${complaint.status || "pending"}`}>
+                    
+                    {/* Thumbnail */}
+                    <div className="incident-media-thumb">
+                      <img
+                        src={complaint.imageUrl || "https://images.unsplash.com/photo-1530587191325-3db32d826c18?w=500&auto=format&fit=crop&q=80"}
+                        alt="Civic waste"
+                        className="thumb-img"
+                      />
+                      <span className={`thumb-badge badge-${wasteType}`}>
+                        {wasteType}
                       </span>
                     </div>
-                    {c.aiConfidence && (
-                      <div className="case-confidence-badge">
-                        <span>⚡ {c.aiConfidence}% AI Conf.</span>
-                      </div>
-                    )}
-                  </div>
 
-                  <div className="case-body">
-                    <div className="case-meta-top">
-                      <span className="case-date">
-                        <FiCalendar size={12} /> {formatDate(c.createdAt)}
-                      </span>
-                      {c.reportedBy && (
-                        <span className="case-reporter">
-                          <FiUser size={12} /> {c.reportedBy.name || "Citizen"}
+                    {/* Details Column */}
+                    <div className="incident-info-col">
+                      <div className="incident-top-meta">
+                        <span className="incident-id-tag">REF #{String(compId).slice(-6)}</span>
+                        <span className="incident-time-text">
+                          <FiClock size={12} /> {formatDate(complaint.createdAt)}
                         </span>
+                      </div>
+
+                      <h4 className="incident-desc-text">
+                        {complaint.description || "Civic waste reported via safAI AI Neural Triage."}
+                      </h4>
+
+                      <div className="incident-meta-chips">
+                        <div className="meta-chip">
+                          <FiMapPin size={13} />
+                          <span title={complaint.location?.address || complaint.locationName}>
+                            {complaint.location?.address || complaint.locationName || "Civic Coordinates Captured"}
+                          </span>
+                        </div>
+                        
+                        <div className="meta-chip">
+                          <FiUser size={13} />
+                          <span>
+                            {complaint.reportedBy?.name || "Citizen Reporter"} 
+                            {complaint.reportedBy?.email ? ` (${complaint.reportedBy.email})` : ""}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Status Update Dropdown */}
+                    <div className="incident-action-col">
+                      <label className="action-label">Resolution Status</label>
+                      <select
+                        className={`status-select-control select-${complaint.status || "pending"}`}
+                        value={complaint.status || "pending"}
+                        onChange={(e) => updateStatus(compId, e.target.value)}
+                        disabled={updatingId === compId}
+                      >
+                        <option value="pending">⏳ Pending Triage</option>
+                        <option value="in-progress">🚚 In Progress</option>
+                        <option value="resolved">✅ Resolved & Cleared</option>
+                      </select>
+                      {updatingId === compId && (
+                        <span className="updating-status-text">Updating DB...</span>
                       )}
                     </div>
 
-                    <h4 className="case-title">{c.wasteType ? (c.wasteType.charAt(0).toUpperCase() + c.wasteType.slice(1)) : "Civic"} Waste</h4>
-
-                    <p className="case-desc">
-                      {c.description && c.description.trim() !== ""
-                        ? c.description
-                        : "Visual report submitted via mobile camera."}
-                    </p>
-
-                    {(c.locationName || c.location?.lat) && (
-                      <div className="case-coords">
-                        <FiMapPin size={13} className="pin-icon" />
-                        <span>{c.locationName || `${c.location.lat.toFixed(4)}, ${c.location.lng.toFixed(4)}`}</span>
-                      </div>
-                    )}
-
-                    {/* Quick Triage Buttons */}
-                    <div className="case-status-triage">
-                      <label>Update Crew Status:</label>
-                      <div className="triage-action-btn-group">
-                        <button 
-                          type="button"
-                          className={`btn-triage-opt ${c.status === "pending" ? "active pending" : ""}`}
-                          onClick={() => updateStatus(c._id, "pending")}
-                          disabled={updatingId === c._id}
-                        >
-                          <FiClock size={13} />
-                          <span>Pending</span>
-                        </button>
-                        
-                        <button 
-                          type="button"
-                          className={`btn-triage-opt ${c.status === "in-progress" ? "active progress" : ""}`}
-                          onClick={() => updateStatus(c._id, "in-progress")}
-                          disabled={updatingId === c._id}
-                        >
-                          <FiTruck size={13} />
-                          <span>In Progress</span>
-                        </button>
-
-                        <button 
-                          type="button"
-                          className={`btn-triage-opt ${c.status === "resolved" ? "active resolved" : ""}`}
-                          onClick={() => updateStatus(c._id, "resolved")}
-                          disabled={updatingId === c._id}
-                        >
-                          <FiCheckCircle size={13} />
-                          <span>Resolved</span>
-                        </button>
-                      </div>
-                    </div>
-
                   </div>
-
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
 
-        {/* Resolved / Archived Reports */}
-        <div className="admin-content-section" style={{ marginTop: "48px" }}>
-          <div className="section-title-wrap-left">
-            <h2>Resolved & Cleared Reports ({resolvedComplaints.length})</h2>
-            <p>Archive of civic complaints verified and cleaned by sanitation teams.</p>
-          </div>
-
-          <div className="admin-complaints-grid">
-            {resolvedComplaints.map((c) => (
-              <div key={c._id} className="admin-case-card resolved-card animate-fade-in">
-                <div className="case-img-container">
-                  <img src={c.imageUrl} alt="Resolved Waste" className="case-img" />
-                  <div className="case-category-pill">
-                    <span className="badge-status badge-resolved">
-                      <FiCheckCircle size={12} /> Resolved
-                    </span>
-                  </div>
-                </div>
-
-                <div className="case-body">
-                  <div className="case-meta-top">
-                    <span className="case-date">
-                      <FiCalendar size={12} /> {formatDate(c.createdAt)}
-                    </span>
-                    {c.reportedBy && (
-                      <span className="case-reporter">
-                        <FiUser size={12} /> {c.reportedBy.name || "Citizen"}
-                      </span>
-                    )}
-                  </div>
-                  <h4 className="case-title">{c.wasteType ? (c.wasteType.charAt(0).toUpperCase() + c.wasteType.slice(1)) : "Civic"} Waste</h4>
-                  <p className="case-desc">{c.description || "Cleared & resolved by local municipal crew."}</p>
-
-                  <div className="resolved-action-row">
-                    <button 
-                      type="button" 
-                      className="btn-reopen-case"
-                      onClick={() => updateStatus(c._id, "in-progress")}
-                    >
-                      <span>↩ Re-open for Inspection</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
       </main>
 
-      {/* Change Admin Password Modal */}
+      {/* Admin Change Password Modal */}
       <ChangePasswordModal 
         isOpen={showPasswordModal} 
         onClose={() => setShowPasswordModal(false)} 
       />
+
+      {/* TiDB Cloud Diagnostic & Connection Modal */}
+      {showDbModal && (
+        <div className="pwd-modal-overlay" onClick={() => setShowDbModal(false)}>
+          <div className="pwd-modal-card animate-pop" style={{ maxWidth: "560px" }} onClick={(e) => e.stopPropagation()}>
+            <div className="pwd-modal-header">
+              <div className="pwd-header-badge" style={{ background: "#ecfdf5", color: "#059669" }}>
+                <FiDatabase size={20} />
+              </div>
+              <div className="pwd-header-titles">
+                <h3>TiDB Cloud Live Diagnostics</h3>
+                <p>Verify live database connectivity and table status.</p>
+              </div>
+              <button type="button" className="pwd-btn-close" onClick={() => setShowDbModal(false)}>
+                <FiX size={18} />
+              </button>
+            </div>
+
+            <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: "16px" }}>
+              
+              {dbTestResult && (
+                <div 
+                  style={{
+                    padding: "12px 16px",
+                    borderRadius: "10px",
+                    background: dbTestResult.connected ? "#f0fdf4" : "#fef2f2",
+                    border: `1px solid ${dbTestResult.connected ? "#bbf7d0" : "#fecaca"}`,
+                    color: dbTestResult.connected ? "#15803d" : "#b91c1c",
+                    fontSize: "13px",
+                    lineHeight: "1.5"
+                  }}
+                >
+                  <div style={{ fontWeight: "700", marginBottom: "4px" }}>
+                    {dbTestResult.connected ? "✅ Database Connected" : "⚠️ Connection Notice"}
+                  </div>
+                  <div>{dbTestResult.message}</div>
+                  {dbTestResult.stats && (
+                    <div style={{ marginTop: "6px", fontWeight: "600", fontSize: "12px" }}>
+                      Users in DB: {dbTestResult.stats.users} | Complaints in DB: {dbTestResult.stats.complaints}
+                    </div>
+                  )}
+                  {dbTestResult.hint && (
+                    <div style={{ marginTop: "4px", fontSize: "12px", opacity: 0.85 }}>
+                      Hint: {dbTestResult.hint}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="pwd-input-group">
+                <label>TiDB Cloud Connection String (Optional Override)</label>
+                <div className="pwd-input-wrapper">
+                  <input
+                    type="text"
+                    placeholder="mysql://[user]:[pass]@gateway01.ap-southeast-1.prod.aws.tidbcloud.com:4000/test?ssl={...}"
+                    value={dbUrlInput}
+                    onChange={(e) => setDbUrlInput(e.target.value)}
+                    style={{ fontSize: "12px", paddingLeft: "12px" }}
+                  />
+                </div>
+                <span style={{ fontSize: "11px", color: "#64748b", marginTop: "4px" }}>
+                  Used for direct serverless queries if backend API environment variables are updating.
+                </span>
+              </div>
+
+              <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", marginTop: "8px" }}>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => setShowDbModal(false)}
+                  style={{ padding: "8px 16px" }}
+                >
+                  Close
+                </button>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={handleTestDatabase}
+                  disabled={dbTesting}
+                  style={{ padding: "8px 18px" }}
+                >
+                  {dbTesting ? "Testing..." : "Test Connection & Sync"}
+                </button>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
