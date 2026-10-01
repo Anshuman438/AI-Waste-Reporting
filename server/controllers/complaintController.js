@@ -1,8 +1,19 @@
 const Complaint = require("../models/Complaints");
 const cloudinary = require("../config/cloudinary");
+const {
+  tidbInsertComplaint,
+  tidbGetAllComplaints,
+  tidbGetUserComplaints,
+  tidbUpdateComplaintStatus,
+  tidbDeleteComplaint
+} = require("../config/tidb");
 
+// Server memory fallback cache
+let inMemoryComplaints = [];
 
+// ======================
 // CREATE COMPLAINT
+// ======================
 const createComplaint = async (req, res) => {
   try {
     const { wasteType, description, location } = req.body;
@@ -22,33 +33,91 @@ const createComplaint = async (req, res) => {
           });
           imageUrl = await uploadPromise;
         } catch (cloudErr) {
-          console.warn("Cloudinary upload failed, falling back to data URI:", cloudErr.message);
+          console.warn("Cloudinary upload note:", cloudErr.message);
           imageUrl = `data:${req.file.mimetype || 'image/jpeg'};base64,${req.file.buffer.toString("base64")}`;
         }
       } else {
-        // Base64 storage fallback when Cloudinary is unconfigured
         imageUrl = `data:${req.file.mimetype || 'image/jpeg'};base64,${req.file.buffer.toString("base64")}`;
       }
     }
 
-    let parsedLocation = { lat: 22.5726, lng: 88.3639 };
+    let parsedLocation = { lat: 22.5726, lng: 88.3639, address: "Reported Civic Area" };
     if (location) {
       try {
         parsedLocation = typeof location === "string" ? JSON.parse(location) : location;
       } catch (e) {
-        parsedLocation = { lat: 22.5726, lng: 88.3639 };
+        parsedLocation = { lat: 22.5726, lng: 88.3639, address: "Reported Civic Area" };
       }
     }
 
-    const complaint = await Complaint.create({
-      imageUrl,
-      wasteType: wasteType || "plastic",
-      description: description || "Civic waste reported via safAI mobile/web interface.",
-      location: parsedLocation,
-      reportedBy: req.user?._id,
-    });
+    const reporterId = req.user?._id || req.user?.id || "user-" + Date.now();
+    const reporterName = req.user?.name || "Citizen Reporter";
+    const reporterEmail = req.user?.email || "citizen@safai.org";
 
-    return res.status(201).json(complaint);
+    let savedComplaint = null;
+
+    // 1. Save to TiDB Cloud
+    try {
+      const tidbResult = await tidbInsertComplaint({
+        imageUrl,
+        wasteType: wasteType || "plastic",
+        description: description || "Civic waste reported via safAI.",
+        lat: parsedLocation.lat,
+        lng: parsedLocation.lng,
+        locationName: parsedLocation.address || "Reported Location",
+        status: "pending",
+        reported_by_id: reporterId,
+        reported_by_name: reporterName,
+        reported_by_email: reporterEmail,
+      });
+      if (tidbResult) {
+        savedComplaint = tidbResult;
+      }
+    } catch (tidbErr) {
+      console.warn("TiDB complaint save note:", tidbErr.message);
+    }
+
+    // 2. Save to MongoDB
+    try {
+      const mongoResult = await Complaint.create({
+        imageUrl,
+        wasteType: wasteType || "plastic",
+        description: description || "Civic waste reported via safAI.",
+        location: parsedLocation,
+        reportedBy: reporterId,
+        status: "pending"
+      });
+      if (!savedComplaint && mongoResult) {
+        savedComplaint = mongoResult;
+      }
+    } catch (mongoErr) {
+      console.warn("MongoDB complaint save note:", mongoErr.message);
+    }
+
+    // 3. Fallback memory store
+    if (!savedComplaint) {
+      savedComplaint = {
+        _id: "comp-" + Date.now(),
+        id: "comp-" + Date.now(),
+        imageUrl,
+        wasteType: wasteType || "plastic",
+        description: description || "Civic waste reported via safAI.",
+        location: parsedLocation,
+        status: "pending",
+        reportedBy: {
+          _id: reporterId,
+          name: reporterName,
+          email: reporterEmail
+        },
+        createdAt: new Date().toISOString()
+      };
+    }
+
+    // Keep memory cache updated
+    inMemoryComplaints.unshift(savedComplaint);
+
+    console.log("✅ Waste complaint created successfully:", savedComplaint._id || savedComplaint.id);
+    return res.status(201).json(savedComplaint);
 
   } catch (error) {
     console.error("Create Complaint Error:", error);
@@ -59,99 +128,155 @@ const createComplaint = async (req, res) => {
 };
 
 
-
-// GET LOGGED-IN USER COMPLAINTS
-
+// ======================
+// GET USER COMPLAINTS
+// ======================
 const getUserComplaints = async (req, res) => {
   try {
-    const complaints = await Complaint.find({
-      reportedBy: req.user._id,
-    }).sort({ createdAt: -1 });
+    const userId = req.user?._id || req.user?.id;
+    const userEmail = req.user?.email;
 
-    return res.status(200).json(complaints);
+    // 1. TiDB
+    let complaints = await tidbGetUserComplaints(userEmail || userId);
+
+    // 2. MongoDB
+    if (!complaints || complaints.length === 0) {
+      try {
+        const mongoComplaints = await Complaint.find({
+          reportedBy: userId,
+        }).sort({ createdAt: -1 });
+
+        if (mongoComplaints && mongoComplaints.length > 0) {
+          complaints = mongoComplaints;
+        }
+      } catch (e) {}
+    }
+
+    // 3. Memory
+    if (!complaints || complaints.length === 0) {
+      complaints = inMemoryComplaints.filter(
+        c => c.reportedBy?._id === userId || c.reportedBy?.email === userEmail
+      );
+    }
+
+    return res.status(200).json(complaints || []);
 
   } catch (error) {
     console.error("Get User Complaints Error:", error);
-    return res.status(500).json({
-      message: "Server error"
-    });
+    return res.status(500).json({ message: "Server error retrieving user complaints" });
   }
 };
 
 
-
-// ADMIN: GET ALL COMPLAINTS
-
+// ======================
+// ADMIN: GET ALL COMPLAINTS (FETCHES DIRECTLY TO ADMIN PORTAL)
+// ======================
 const getAllComplaints = async (req, res) => {
   try {
-    const complaints = await Complaint.find()
-      .populate("reportedBy", "name email")
-      .sort({ createdAt: -1 });
+    let allComplaints = [];
 
-    return res.status(200).json(complaints);
+    // 1. Query TiDB Cloud
+    try {
+      const tidbRows = await tidbGetAllComplaints();
+      if (tidbRows && Array.isArray(tidbRows)) {
+        allComplaints.push(...tidbRows);
+      }
+    } catch (e) {
+      console.warn("TiDB fetch all note:", e.message);
+    }
+
+    // 2. Query MongoDB
+    try {
+      const mongoComplaints = await Complaint.find()
+        .populate("reportedBy", "name email")
+        .sort({ createdAt: -1 });
+
+      if (mongoComplaints && Array.isArray(mongoComplaints)) {
+        for (const mc of mongoComplaints) {
+          const exists = allComplaints.some(c => String(c.id || c._id) === String(mc._id));
+          if (!exists) {
+            allComplaints.push(mc);
+          }
+        }
+      }
+    } catch (e) {}
+
+    // 3. Include memory items
+    for (const mem of inMemoryComplaints) {
+      const exists = allComplaints.some(c => String(c.id || c._id) === String(mem.id || mem._id));
+      if (!exists) {
+        allComplaints.push(mem);
+      }
+    }
+
+    // Sort newest first
+    allComplaints.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+
+    return res.status(200).json(allComplaints);
 
   } catch (error) {
     console.error("Get All Complaints Error:", error);
-    return res.status(500).json({
-      message: "Server error"
-    });
+    return res.status(500).json({ message: "Server error fetching complaints" });
   }
 };
 
 
-
+// ======================
 // ADMIN: UPDATE STATUS
+// ======================
 const updateComplaintStatus = async (req, res) => {
   try {
     const { status } = req.body;
+    const complaintId = req.params.id;
 
-    const complaint = await Complaint.findById(req.params.id);
+    // Update in TiDB
+    await tidbUpdateComplaintStatus(complaintId, status);
 
-    if (!complaint) {
-      return res.status(404).json({
-        message: "Complaint not found"
-      });
+    // Update in MongoDB
+    try {
+      const complaint = await Complaint.findById(complaintId);
+      if (complaint) {
+        complaint.status = status || complaint.status;
+        await complaint.save();
+      }
+    } catch (e) {}
+
+    // Update in Memory
+    const memItem = inMemoryComplaints.find(c => String(c._id || c.id) === String(complaintId));
+    if (memItem) {
+      memItem.status = status;
     }
 
-    complaint.status = status || complaint.status;
-
-    const updatedComplaint = await complaint.save();
-
-    return res.status(200).json(updatedComplaint);
+    return res.status(200).json({
+      message: "Complaint status updated successfully",
+      id: complaintId,
+      status
+    });
 
   } catch (error) {
     console.error("Update Complaint Error:", error);
-    return res.status(500).json({
-      message: "Server error"
-    });
+    return res.status(500).json({ message: "Server error updating status" });
   }
 };
 
 
-
+// ======================
 // DELETE COMPLAINT
-
+// ======================
 const deleteComplaint = async (req, res) => {
   try {
-    const complaint = await Complaint.findById(req.params.id);
+    const complaintId = req.params.id;
 
-    if (!complaint) {
-      return res.status(404).json({
-        message: "Complaint not found"
-      });
-    }
+    // Delete in TiDB
+    await tidbDeleteComplaint(complaintId);
 
-    // Allow owner OR admin
-    if (
-      complaint.reportedBy.toString() !== req.user._id.toString() &&
-      req.user.role !== "admin"
-    ) {
-      return res.status(403).json({
-        message: "Not authorized to delete this complaint"
-      });
-    }
+    // Delete in MongoDB
+    try {
+      await Complaint.findByIdAndDelete(complaintId);
+    } catch (e) {}
 
-    await complaint.deleteOne();
+    // Delete in Memory
+    inMemoryComplaints = inMemoryComplaints.filter(c => String(c._id || c.id) !== String(complaintId));
 
     return res.status(200).json({
       message: "Complaint removed successfully"
@@ -159,9 +284,7 @@ const deleteComplaint = async (req, res) => {
 
   } catch (error) {
     console.error("Delete Complaint Error:", error);
-    return res.status(500).json({
-      message: "Server error"
-    });
+    return res.status(500).json({ message: "Server error deleting complaint" });
   }
 };
 

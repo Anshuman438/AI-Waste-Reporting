@@ -14,7 +14,7 @@ const getTiDB = () => {
   }
 };
 
-// Initialize TiDB Tables and auto-seed admin if missing
+// Initialize TiDB Tables
 const initTiDB = async () => {
   const conn = getTiDB();
   if (!conn) return;
@@ -39,7 +39,7 @@ const initTiDB = async () => {
     await conn.execute(`
       CREATE TABLE IF NOT EXISTS complaints (
         id INT AUTO_INCREMENT PRIMARY KEY,
-        imageUrl TEXT,
+        imageUrl LONGTEXT,
         wasteType VARCHAR(100),
         description TEXT,
         lat DOUBLE,
@@ -114,6 +114,152 @@ const tidbUpdateUserPassword = async (email, hashedPassword) => {
   }
 };
 
+// Complaint Queries for TiDB
+const tidbInsertComplaint = async ({
+  imageUrl,
+  wasteType,
+  description,
+  lat,
+  lng,
+  locationName,
+  status = "pending",
+  reported_by_id,
+  reported_by_name,
+  reported_by_email
+}) => {
+  const conn = getTiDB();
+  if (!conn) return null;
+  try {
+    const result = await conn.execute(
+      `INSERT INTO complaints 
+       (imageUrl, wasteType, description, lat, lng, locationName, status, reported_by_id, reported_by_name, reported_by_email) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        imageUrl || "",
+        wasteType || "mixed",
+        description || "Civic waste report",
+        lat || 22.5726,
+        lng || 88.3639,
+        locationName || "Reported Location",
+        status || "pending",
+        String(reported_by_id || ""),
+        reported_by_name || "Citizen Reporter",
+        reported_by_email || "citizen@safai.org"
+      ]
+    );
+
+    return {
+      _id: result.lastInsertId ? String(result.lastInsertId) : "tidb-" + Date.now(),
+      id: result.lastInsertId ? String(result.lastInsertId) : "tidb-" + Date.now(),
+      imageUrl,
+      wasteType,
+      description,
+      location: { lat: lat || 22.5726, lng: lng || 88.3639, address: locationName || "Reported Location" },
+      status: status || "pending",
+      reportedBy: {
+        _id: reported_by_id,
+        name: reported_by_name || "Citizen Reporter",
+        email: reported_by_email || "citizen@safai.org"
+      },
+      createdAt: new Date().toISOString()
+    };
+  } catch (err) {
+    console.error("TiDB Insert Complaint Error:", err.message);
+    return null;
+  }
+};
+
+const tidbGetAllComplaints = async () => {
+  const conn = getTiDB();
+  if (!conn) return [];
+  try {
+    const rows = await conn.execute(`SELECT * FROM complaints ORDER BY created_at DESC`);
+    if (!rows || !Array.isArray(rows)) return [];
+
+    return rows.map((r) => ({
+      _id: String(r.id),
+      id: String(r.id),
+      imageUrl: r.imageUrl,
+      wasteType: r.wasteType,
+      description: r.description,
+      location: {
+        lat: r.lat || 22.5726,
+        lng: r.lng || 88.3639,
+        address: r.locationName || "Reported Location"
+      },
+      status: r.status || "pending",
+      reportedBy: {
+        _id: r.reported_by_id,
+        name: r.reported_by_name || "Citizen Reporter",
+        email: r.reported_by_email || "citizen@safai.org"
+      },
+      createdAt: r.created_at || new Date().toISOString()
+    }));
+  } catch (err) {
+    console.error("TiDB GetAllComplaints Error:", err.message);
+    return [];
+  }
+};
+
+const tidbGetUserComplaints = async (userEmailOrId) => {
+  const conn = getTiDB();
+  if (!conn) return [];
+  try {
+    const rows = await conn.execute(
+      `SELECT * FROM complaints WHERE reported_by_email = ? OR reported_by_id = ? ORDER BY created_at DESC`,
+      [String(userEmailOrId), String(userEmailOrId)]
+    );
+    if (!rows || !Array.isArray(rows)) return [];
+
+    return rows.map((r) => ({
+      _id: String(r.id),
+      id: String(r.id),
+      imageUrl: r.imageUrl,
+      wasteType: r.wasteType,
+      description: r.description,
+      location: {
+        lat: r.lat || 22.5726,
+        lng: r.lng || 88.3639,
+        address: r.locationName || "Reported Location"
+      },
+      status: r.status || "pending",
+      reportedBy: {
+        _id: r.reported_by_id,
+        name: r.reported_by_name,
+        email: r.reported_by_email
+      },
+      createdAt: r.created_at || new Date().toISOString()
+    }));
+  } catch (err) {
+    console.error("TiDB GetUserComplaints Error:", err.message);
+    return [];
+  }
+};
+
+const tidbUpdateComplaintStatus = async (id, status) => {
+  const conn = getTiDB();
+  if (!conn) return false;
+  try {
+    await conn.execute(`UPDATE complaints SET status = ? WHERE id = ?`, [status, id]);
+    return true;
+  } catch (err) {
+    console.error("TiDB UpdateComplaintStatus Error:", err.message);
+    return false;
+  }
+};
+
+const tidbDeleteComplaint = async (id) => {
+  const conn = getTiDB();
+  if (!conn) return false;
+  try {
+    await conn.execute(`DELETE FROM complaints WHERE id = ?`, [id]);
+    return true;
+  } catch (err) {
+    console.error("TiDB DeleteComplaint Error:", err.message);
+    return false;
+  }
+};
+
 module.exports = {
   getTiDB,
   initTiDB,
@@ -121,4 +267,9 @@ module.exports = {
   tidbFindUserById,
   tidbCreateUser,
   tidbUpdateUserPassword,
+  tidbInsertComplaint,
+  tidbGetAllComplaints,
+  tidbGetUserComplaints,
+  tidbUpdateComplaintStatus,
+  tidbDeleteComplaint
 };

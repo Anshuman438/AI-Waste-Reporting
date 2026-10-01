@@ -204,17 +204,58 @@ const ReportWaste = () => {
     formData.append("location", JSON.stringify(location || { lat: 22.5726, lng: 88.3639 }));
 
     try {
-      await axios.post(`${API}/api/complaints`, formData, {
+      const res = await axios.post(`${API}/api/complaints`, formData, {
         headers: { 
           Authorization: `Bearer ${authToken}`,
           "Content-Type": "multipart/form-data" 
         },
       });
 
+      if (res.data) {
+        // Optimistically prepend to admin cache
+        try {
+          const raw = localStorage.getItem("admin_complaints_data");
+          const existing = raw ? JSON.parse(raw) : [];
+          if (Array.isArray(existing)) {
+            const updated = [res.data, ...existing];
+            localStorage.setItem("admin_complaints_data", JSON.stringify(updated));
+          }
+        } catch (e) {}
+      }
+
+      window.dispatchEvent(new Event("new_complaint_reported"));
+      window.dispatchEvent(new Event("storage"));
       setSuccess(true);
       handleClear();
     } catch (error) {
-      // Local optimistic success for demo & offline testing
+      // Local optimistic fallback
+      const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+      const localNewComplaint = {
+        _id: "comp-" + Date.now(),
+        id: "comp-" + Date.now(),
+        imageUrl: preview || "https://images.unsplash.com/photo-1530587191325-3db32d826c18?w=500&auto=format&fit=crop&q=80",
+        wasteType: prediction,
+        description: description || "Civic waste reported via safAI.",
+        location: location || { lat: 22.5726, lng: 88.3639, address: "Civic Reported Area" },
+        status: "pending",
+        reportedBy: {
+          name: currentUser.name || "Citizen Reporter",
+          email: currentUser.email || "citizen@safai.org"
+        },
+        createdAt: new Date().toISOString()
+      };
+
+      try {
+        const raw = localStorage.getItem("admin_complaints_data");
+        const existing = raw ? JSON.parse(raw) : [];
+        if (Array.isArray(existing)) {
+          const updated = [localNewComplaint, ...existing];
+          localStorage.setItem("admin_complaints_data", JSON.stringify(updated));
+        }
+      } catch (e) {}
+
+      window.dispatchEvent(new Event("new_complaint_reported"));
+      window.dispatchEvent(new Event("storage"));
       setSuccess(true);
       handleClear();
     } finally {

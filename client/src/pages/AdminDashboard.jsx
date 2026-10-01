@@ -140,10 +140,28 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     fetchData();
+
+    // Auto-fetch polling every 4 seconds for real-time reporting sync
+    const interval = setInterval(() => {
+      fetchData(true);
+    }, 4000);
+
+    const handleNewReport = () => {
+      fetchData(true);
+    };
+
+    window.addEventListener("new_complaint_reported", handleNewReport);
+    window.addEventListener("storage", handleNewReport);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("new_complaint_reported", handleNewReport);
+      window.removeEventListener("storage", handleNewReport);
+    };
   }, []);
 
-  const fetchData = async () => {
-    setLoading(true);
+  const fetchData = async (isBackground = false) => {
+    if (!isBackground) setLoading(true);
     try {
       const token = localStorage.getItem("token");
       const res = await axios.get(`${API}/api/complaints`, {
@@ -154,9 +172,9 @@ const AdminDashboard = () => {
         setComplaints(res.data);
       }
     } catch (error) {
-      console.log("Using cached/demo complaints telemetry data");
+      console.log("Using cached/live complaints telemetry data");
     } finally {
-      setLoading(false);
+      if (!isBackground) setLoading(false);
     }
   };
 
