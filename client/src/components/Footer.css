@@ -1,0 +1,260 @@
+/* =========================================================
+   SAFAI - COZY ROYAL SMALL FOOTER COMPONENT
+========================================================= */
+
+.cleanify-small-footer {
+  width: 100%;
+  background: linear-gradient(180deg, #faf7f2 0%, #f4ede2 100%);
+  border-top: 1.5px solid rgba(197, 155, 76, 0.25);
+  position: relative;
+  box-sizing: border-box;
+  padding: 36px 20px 28px;
+  overflow: hidden;
+  z-index: 10;
+}
+
+.cleanify-small-footer::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #c59b4c, transparent);
+}
+
+.footer-small-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+/* 1. Top Strip: Brand + Status + Back to Top */
+.footer-top-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.footer-mini-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.footer-mini-logo {
+  width: 36px;
+  height: 36px;
+  background: linear-gradient(135deg, #0d382b 0%, #155e45 100%);
+  color: #ffffff;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(13, 56, 43, 0.2);
+  border: 1px solid rgba(197, 155, 76, 0.4);
+  transition: transform 0.25s ease;
+}
+
+.footer-mini-brand:hover .footer-mini-logo {
+  transform: rotate(-6deg) scale(1.05);
+}
+
+.footer-mini-brand-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.footer-brand-title {
+  font-family: 'Quicksand', 'Nunito', sans-serif;
+  font-size: 1.25rem;
+  font-weight: 900;
+  color: #0d382b;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.footer-brand-sub {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #6c7c74;
+}
+
+/* Back to Top Button */
+.btn-footer-back-to-top {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #ffffff;
+  border: 1.5px solid rgba(197, 155, 76, 0.3);
+  color: #0d382b;
+  padding: 6px 14px;
+  border-radius: 9999px;
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+  transition: all 0.22s ease;
+  font-family: inherit;
+}
+
+.btn-footer-back-to-top:hover {
+  background: #0d382b;
+  color: #ffffff;
+  border-color: #0d382b;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(13, 56, 43, 0.2);
+}
+
+/* 2. Middle Links Strip */
+.footer-links-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 16px 0;
+  border-top: 1px solid rgba(220, 214, 200, 0.6);
+  border-bottom: 1px solid rgba(220, 214, 200, 0.6);
+}
+
+.footer-nav-pills {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.footer-nav-link {
+  background: transparent;
+  border: none;
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: #3b5247;
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+}
+
+.footer-nav-link:hover {
+  background: #ffffff;
+  color: #0d382b;
+  transform: translateY(-1px);
+}
+
+.footer-nav-link.highlight-report {
+  background: #dcfce7;
+  color: #15803d;
+  font-weight: 800;
+  border: 1px solid #86efac;
+}
+
+.footer-nav-link.highlight-report:hover {
+  background: #bbf7d0;
+}
+
+.footer-nav-link.admin-link {
+  color: #0369a1;
+}
+
+.footer-nav-link.admin-link:hover {
+  background: #e0f2fe;
+}
+
+/* 3. Bottom Line */
+.footer-bottom-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  font-size: 0.78rem;
+  color: #788c80;
+}
+
+.copyright-text {
+  margin: 0;
+}
+
+.copyright-text strong {
+  color: #0d382b;
+}
+
+.footer-bottom-tags {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  color: #8c9e94;
+}
+
+.dot-sep {
+  color: #c59b4c;
+}
+
+/* =========================================================
+   RESPONSIVE DESIGN (MOBILE VIEW)
+========================================================= */
+@media (max-width: 768px) {
+  .cleanify-small-footer {
+    padding: 28px 16px calc(64px + env(safe-area-inset-bottom, 24px));
+    margin-top: auto;
+  }
+
+  .footer-small-container {
+    gap: 16px;
+  }
+
+  .footer-top-strip {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .btn-footer-back-to-top {
+    align-self: auto;
+  }
+
+  .footer-links-strip {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 0;
+  }
+
+  .footer-nav-pills {
+    width: 100%;
+    gap: 8px;
+  }
+
+  .footer-nav-link {
+    font-size: 0.84rem;
+    padding: 7px 12px;
+  }
+
+  .footer-bottom-line {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    padding-bottom: 8px;
+  }
+
+  .footer-bottom-tags {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+}

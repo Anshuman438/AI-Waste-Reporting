@@ -1,108 +1,367 @@
-/*layout*/
-.sidebar {
-  width: 240px;
-  min-height: 100vh;
-  background: #3a4660;
-  padding: 30px 18px;
-  display: flex;
-  flex-direction: column;
-  transition: 0.3s ease;
+/* Admin Mobile Header Bar */
+.admin-mobile-bar {
+  display: none;
+  position: sticky;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 60px;
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 0 16px;
+  align-items: center;
+  justify-content: space-between;
+  z-index: 1000;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
-/*logo*/
-.sidebar-logo {
-  font-size: 20px;
-  font-weight: 700;
-  margin-bottom: 30px;
-  cursor: pointer;
-  color: white;
-}
-
-.sidebar-logo span {
-  color: #ed8a63;
-}
-
-.admin-badge {
-  font-size: 11px;
-  margin-top: 4px;
-  color: #c9af98;
-}
-
-/*menu*/
-.sidebar-menu {
-  flex: 1;
-}
-
-.menu-item {
+.mobile-brand {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  border-radius: 10px;
-  margin-bottom: 8px;
+  gap: 8px;
+  font-size: 1.15rem;
+  font-family: var(--font-heading, "Plus Jakarta Sans", sans-serif);
+  color: #0f172a;
   cursor: pointer;
-  color: #c9af98;
-  transition: 0.3s ease;
 }
 
-.menu-item:hover {
-  background: #ed8a63;
-  color: white;
-}
-
-.menu-item.active {
-  background: #ed8a63;
-  color: white;
-}
-
-/*footer*/
-.sidebar-footer {
+.mobile-logo-icon {
+  width: 32px;
+  height: 32px;
+  background: #15803d;
+  color: #ffffff;
+  border-radius: 8px;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  border-radius: 10px;
+  justify-content: center;
+}
+
+.admin-mobile-toggle {
+  background: transparent;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  color: #334155;
   cursor: pointer;
-  color: #c9af98;
-  transition: 0.3s ease;
+  padding: 6px 10px;
+  font-size: 1rem;
 }
 
-.sidebar-footer:hover {
-  background: #845007;
-  color: white;
-}
-
-/*mobile toggle*/
-.mobile-toggle {
+/* Sidebar Backdrop */
+.admin-backdrop {
   display: none;
   position: fixed;
-  top: 15px;
-  left: 15px;
-  background: #3a4660;
-  color: white;
-  padding: 8px;
-  border-radius: 8px;
-  cursor: pointer;
-  z-index: 1000;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(4px);
+  z-index: 1040;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
 }
 
-/*responsive*/
-@media (max-width: 768px) {
+.admin-backdrop.active {
+  opacity: 1;
+  pointer-events: auto;
+}
 
-  .mobile-toggle {
+/* Desktop & Persistent Sidebar */
+.admin-sidebar {
+  width: 270px;
+  min-width: 270px;
+  height: 100vh;
+  position: sticky;
+  top: 0;
+  background: #ffffff;
+  border-right: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  padding: 24px 20px;
+  z-index: 1050;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Sidebar Logo Header */
+.sidebar-top {
+  margin-bottom: 20px;
+}
+
+.admin-logo-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.admin-logo-badge {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #15803d 0%, #166534 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(21, 128, 61, 0.25);
+  color: #ffffff;
+}
+
+.admin-logo-icon {
+  color: #ffffff;
+}
+
+.admin-brand-name {
+  font-size: 1.35rem;
+  font-weight: 900;
+  color: #15803d;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+}
+
+.admin-tag {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #0284c7;
+  background: #e0f2fe;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 3px;
+}
+
+/* Portal Switch */
+.sidebar-portal-switch {
+  margin-bottom: 24px;
+}
+
+.btn-switch-public {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #f0fdf4;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.btn-switch-public:hover {
+  background: #dcfce7;
+  transform: translateY(-1px);
+}
+
+/* Navigation Menu */
+.sidebar-nav-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.section-label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #94a3b8;
+  margin-bottom: 10px;
+  padding-left: 4px;
+}
+
+.menu-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.menu-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 10px 14px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  color: #475569;
+  font-weight: 600;
+  font-size: 0.90rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+
+.menu-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.count-pill {
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.menu-btn.active .count-pill {
+  background: #15803d;
+  color: #ffffff;
+}
+
+.category-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+
+.category-dot.plastic {
+  background: #3b82f6;
+  box-shadow: 0 0 6px #60a5fa;
+}
+
+.category-dot.metal {
+  background: #64748b;
+  box-shadow: 0 0 6px #94a3b8;
+}
+
+.category-dot.bio {
+  background: #10b981;
+  box-shadow: 0 0 6px #34d399;
+}
+
+.menu-btn:hover {
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+.menu-btn.active {
+  background: #f0fdf4;
+  color: #15803d;
+  border-color: #bbf7d0;
+  font-weight: 700;
+}
+
+/* System Card */
+.sidebar-system-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 16px;
+}
+
+.system-status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+  animation: pulse-ring 1.8s infinite;
+}
+
+@keyframes pulse-ring {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+  70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+.system-sub {
+  font-size: 0.70rem;
+  color: #64748b;
+  margin-top: 3px;
+  line-height: 1.3;
+}
+
+/* Change Password & Logout Actions */
+.admin-sidebar-action-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 0.86rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+  margin-bottom: 8px;
+}
+
+.btn-change-pwd {
+  background: #fdfbf7;
+  color: #0d382b;
+  border: 1.5px solid rgba(197, 155, 76, 0.4);
+}
+
+.btn-change-pwd:hover {
+  background: #f7f0e0;
+  border-color: #c59b4c;
+  transform: translateY(-1px);
+}
+
+/* Logout Button */
+.admin-logout-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px;
+  background: #fff1f2;
+  color: #e11d48;
+  border: 1px solid #fecdd3;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+
+.admin-logout-btn:hover {
+  background: #ffe4e6;
+  transform: translateY(-1px);
+}
+
+/* Mobile Responsive */
+@media (max-width: 900px) {
+  .admin-mobile-bar {
+    display: flex;
+  }
+
+  .admin-backdrop {
     display: block;
   }
 
-  .sidebar {
+  .admin-sidebar {
     position: fixed;
-    left: -250px;
     top: 0;
-    height: 100vh;
-    z-index: 999;
-  }
-
-  .sidebar.open {
     left: 0;
+    transform: translateX(-100%);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
   }
 
+  .admin-sidebar.open {
+    transform: translateX(0);
+  }
 }

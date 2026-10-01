@@ -1,154 +1,635 @@
-.my-wrapper {
-  background:
-    linear-gradient(rgba(201, 175, 152, 0.9), rgba(201, 175, 152, 0.9)),
-    url("../assets/waste1.jpg") no-repeat center center / cover;
-  min-height: 100dvh;
-  padding: 4vh 4vw;
-}
+/* =========================================================================
+   ROYAL & COZY MY COMPLAINTS / REPORTS PAGE THEME
+========================================================================= */
 
-/*header - reduced height*/
-.my-header-box {
-  max-width: 1100px;
-  margin: auto;
-  margin-bottom: 30px;
-
-  background: #3a4660;
-  padding: 18px 24px;
-  border-radius: 14px;
-  color: white;
-}
-
-.my-header-box h1 {
-  font-size: 20px;
-  margin-bottom: 4px;
-}
-
-.my-header-box p {
-  font-size: 13px;
-  opacity: 0.9;
-}
-
-/*grid*/
-.my-grid {
-  max-width: 1100px;
-  margin: auto;
-
-  display: grid;
-  gap: 22px;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-}
-
-/*card*/
-.complaint-card {
-  background: white;
-  border-radius: 16px;
-  overflow: hidden;
-
-  border: 2px solid #3a4660;
-  transition: 0.3s ease;
-}
-
-.complaint-card:hover {
-  border-color: #ed8a63;
-  transform: translateY(-3px);
-}
-
-.complaint-card img {
+.my-complaints-royal-root {
+  flex: 1;
   width: 100%;
-  height: 180px;
-  object-fit: cover;
+  min-height: auto;
+  background: 
+    radial-gradient(ellipse 65% 50% at 50% -10%, rgba(197, 155, 76, 0.12), transparent),
+    radial-gradient(ellipse 50% 50% at 85% 90%, rgba(20, 83, 45, 0.07), transparent),
+    radial-gradient(ellipse 50% 50% at 10% 80%, rgba(197, 155, 76, 0.08), transparent),
+    #faf7f2;
+  font-family: var(--font-body, "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, sans-serif);
 }
 
-/*content*/
-.complaint-content {
-  padding: 16px;
+.my-complaints-container {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 105px 24px 64px;
+}
+
+/* Header Area */
+.my-complaints-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 20px;
+  margin-bottom: 28px;
+}
+
+.header-left-col {
   display: flex;
   flex-direction: column;
-  gap: 10px;
 }
 
-.card-header {
+.header-top-tag-row {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
 }
 
-.card-header h3 {
-  font-size: 16px;
-  color: #3a4660;
+.btn-back-home {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #ffffff;
+  color: #2c4238;
+  border: 1.5px solid rgba(197, 155, 76, 0.35);
+  padding: 6px 14px;
+  border-radius: 9999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
 }
 
-.description {
-  font-size: 13px;
-  color: #845007;
+.btn-back-home:hover {
+  background: #fdfbf7;
+  color: #0d382b;
+  border-color: #c59b4c;
+  transform: translateY(-1px);
+}
+
+.eco-xp-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #fef9ed;
+  color: #9a680c;
+  border: 1px solid #f3dcaf;
+  padding: 5px 14px;
+  border-radius: 9999px;
+  font-size: 0.80rem;
+  font-weight: 800;
+}
+
+.sparkle-gold {
+  color: #d97706;
+}
+
+.royal-complaints-title {
+  font-size: 2.3rem;
+  font-weight: 900;
+  color: #0d382b;
+  margin: 0 0 6px 0;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+}
+
+.royal-complaints-sub {
+  font-size: 1rem;
+  color: #556860;
+  max-width: 650px;
+  margin: 0;
   line-height: 1.5;
 }
 
-/*status*/
-.status {
+.header-right-col {
+  display: flex;
+  align-items: center;
+}
+
+.btn-royal-new-report {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #0d382b 0%, #155e45 100%);
+  color: #ffffff;
+  border: 1px solid rgba(197, 155, 76, 0.4);
+  padding: 12px 22px;
+  border-radius: 9999px;
+  font-weight: 800;
+  font-size: 0.90rem;
+  cursor: pointer;
+  box-shadow: 0 8px 24px -4px rgba(13, 56, 43, 0.35);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  font-family: inherit;
+}
+
+.btn-royal-new-report:hover {
+  background: linear-gradient(135deg, #08261d 0%, #0e4533 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px -4px rgba(13, 56, 43, 0.45);
+}
+
+/* Filter Tabs Bar */
+.complaints-filter-bar {
+  margin-bottom: 28px;
+}
+
+.filter-tab-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.filter-pill-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #ffffff;
+  border: 1px solid #dfd8cb;
+  color: #475a52;
+  font-size: 0.86rem;
+  font-weight: 700;
+  padding: 8px 18px;
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.filter-pill-btn:hover {
+  background: #fdfbf7;
+  color: #0d382b;
+  border-color: #c59b4c;
+}
+
+.filter-pill-btn.active {
+  background: #0d382b;
+  color: #ffffff;
+  border-color: #0d382b;
+  box-shadow: 0 4px 14px rgba(13, 56, 43, 0.22);
+}
+
+.tab-count-bubble {
+  font-size: 0.74rem;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 9999px;
+  background: rgba(0, 0, 0, 0.07);
+  color: inherit;
+}
+
+.filter-pill-btn.active .tab-count-bubble {
+  background: rgba(255, 255, 255, 0.22);
+  color: #ffffff;
+}
+
+/* Empty State Card */
+.empty-complaints-card {
+  background: #ffffff;
+  border: 1.5px solid rgba(197, 155, 76, 0.25);
+  border-radius: 26px;
+  padding: 56px 24px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 16px 40px -10px rgba(13, 56, 43, 0.05);
+}
+
+.empty-icon-circle {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: #fef9ed;
+  color: #c59b4c;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid #f3dcaf;
+  margin-bottom: 18px;
+}
+
+.empty-complaints-card h3 {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #0d382b;
+  margin: 0 0 8px 0;
+}
+
+.empty-complaints-card p {
+  font-size: 0.92rem;
+  color: #6d7e77;
+  max-width: 440px;
+  margin: 0 0 24px 0;
+  line-height: 1.5;
+}
+
+/* Cards Grid */
+.complaints-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 24px;
+}
+
+.user-complaint-card {
+  background: #ffffff;
+  border: 1.5px solid rgba(197, 155, 76, 0.22);
+  border-radius: 24px;
+  overflow: hidden;
+  box-shadow: 0 12px 32px -6px rgba(13, 56, 43, 0.06);
+  display: flex;
+  flex-direction: column;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.user-complaint-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 48px -8px rgba(13, 56, 43, 0.12);
+  border-color: #c59b4c;
+}
+
+/* Image Wrap */
+.complaint-img-wrap {
+  position: relative;
+  width: 100%;
+  height: 200px;
+  background: #0f1f18;
+}
+
+.complaint-card-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.35s ease;
+}
+
+.user-complaint-card:hover .complaint-card-img {
+  transform: scale(1.03);
+}
+
+.badge-overlay {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+}
+
+.badge-category {
+  font-size: 0.74rem;
+  font-weight: 800;
+  padding: 4px 11px;
+  border-radius: 9999px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  background: #ffffff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.badge-category.badge-plastic {
+  color: #1d4ed8;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+}
+
+.badge-category.badge-metal {
+  color: #334155;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+}
+
+.badge-category.badge-biodegradable {
+  color: #15803d;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+}
+
+.ai-conf-pill {
+  position: absolute;
+  bottom: 10px;
+  right: 12px;
+  background: rgba(13, 26, 21, 0.85);
+  color: #ffffff;
+  backdrop-filter: blur(4px);
+  font-size: 0.70rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+/* Card Body */
+.complaint-card-body {
+  padding: 20px 22px 22px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.complaint-card-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.royal-badge-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.74rem;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 9999px;
+}
+
+.royal-badge-status.status-pending {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+}
+
+.royal-badge-status.status-in-progress {
+  background: #e0f2fe;
+  color: #0369a1;
+  border: 1px solid #bae6fd;
+}
+
+.royal-badge-status.status-resolved {
+  background: #dcfce7;
+  color: #15803d;
+  border: 1px solid #86efac;
+}
+
+.report-time {
+  font-size: 0.74rem;
+  color: #889990;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.complaint-type-title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #0d382b;
+  margin: 0 0 6px 0;
+}
+
+.complaint-desc-text {
+  font-size: 0.85rem;
+  color: #4a5c54;
+  line-height: 1.45;
+  margin: 0 0 14px 0;
+  flex: 1;
+}
+
+.complaint-location-tag {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.76rem;
+  color: #0d382b;
+  background: #f5f2e9;
+  padding: 6px 10px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  font-weight: 600;
+}
+
+.pin-icon {
+  flex-shrink: 0;
+  color: #0d382b;
+}
+
+/* Stepper Status Progress Track */
+.status-stepper-box {
+  background: #fcfbf9;
+  border: 1px solid #ebe4d5;
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin-bottom: 16px;
+}
+
+.stepper-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.70rem;
+  font-weight: 800;
+  color: #9aa8a1;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.stepper-labels span.active {
+  color: #0d382b;
+}
+
+.stepper-bar-track {
+  width: 100%;
+  height: 6px;
+  background: #e6ded1;
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.stepper-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #10b981 0%, #0d382b 100%);
+  border-radius: 9999px;
+  transition: width 0.5s ease;
+}
+
+/* Actions Footer */
+.complaint-card-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 12px;
+  border-top: 1px solid #f1ece1;
+}
+
+.xp-tag-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #9a680c;
+  background: #fef9ed;
+  border: 1px solid #f3dcaf;
+  padding: 3px 9px;
+  border-radius: 9999px;
+}
+
+.btn-delete-report {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   padding: 4px 8px;
   border-radius: 6px;
-  font-size: 11px;
-  font-weight: 600;
+  transition: all 0.15s ease;
+  font-family: inherit;
 }
 
-.status.pending {
-  background: #ffe0d2;
-  color: #845007;
+.btn-delete-report:hover {
+  background: #fff1f2;
+  color: #e11d48;
 }
 
-.status.progress {
-  background: #fcd5c4;
-  color: #3a4660;
+/* Modal Dialog */
+.modal-backdrop-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(13, 26, 21, 0.6);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 20px;
 }
 
-.status.resolved {
-  background: #d8f3dc;
-  color: #166534;
+.modal-dialog-box {
+  background: #ffffff;
+  border: 1.5px solid rgba(197, 155, 76, 0.3);
+  border-radius: 24px;
+  padding: 32px 28px;
+  max-width: 440px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.2);
 }
 
-/*delete button*/
-.delete-btn {
-  margin-top: 8px;
-  height: 36px;
+.modal-icon-danger {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: #fff1f2;
+  color: #e11d48;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+  border: 1.5px solid #fecdd3;
+}
+
+.modal-dialog-box h3 {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #0d382b;
+  margin: 0 0 8px 0;
+}
+
+.modal-dialog-box p {
+  font-size: 0.88rem;
+  color: #556860;
+  margin: 0 0 24px 0;
+  line-height: 1.5;
+}
+
+.modal-btn-group {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.btn-modal-cancel {
+  background: #ffffff;
+  border: 1.5px solid #dcd3c3;
+  color: #475a52;
+  padding: 10px 20px;
+  border-radius: 9999px;
+  font-weight: 700;
+  font-size: 0.88rem;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+
+.btn-modal-cancel:hover {
+  background: #f7f3ea;
+  color: #0d382b;
+}
+
+.btn-modal-danger {
+  background: #e11d48;
+  border: none;
+  color: #ffffff;
+  padding: 10px 22px;
+  border-radius: 9999px;
+  font-weight: 800;
+  font-size: 0.88rem;
+  cursor: pointer;
+  font-family: inherit;
+  box-shadow: 0 4px 14px rgba(225, 29, 72, 0.3);
+  transition: all 0.2s ease;
+}
+
+.btn-modal-danger:hover {
+  background: #be123c;
+  transform: translateY(-1px);
+}
+
+/* Skeleton Loading */
+.loading-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+.complaint-skeleton-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  overflow: hidden;
+  height: 320px;
+}
+
+.skeleton-img {
+  width: 100%;
+  height: 180px;
+  background: #f1f5f9;
+  animation: pulse 1.5s infinite;
+}
+
+.skeleton-content {
+  padding: 18px;
+}
+
+.skeleton-line {
+  height: 12px;
+  background: #f1f5f9;
   border-radius: 6px;
-  font-size: 13px;
-  font-weight: 600;
-
-  background: #ed8a63;
-  color: white;
-
-  transition: 0.3s ease;
+  margin-bottom: 10px;
+  animation: pulse 1.5s infinite;
 }
 
-.delete-btn:hover {
-  background: #845007;
+.skeleton-line.short { width: 40%; }
+.skeleton-line.medium { width: 75%; }
+
+@keyframes pulse {
+  0% { opacity: 0.6; }
+  50% { opacity: 1; }
+  100% { opacity: 0.6; }
 }
 
-/*loading*/
-.loading {
-  text-align: center;
-  margin-top: 40px;
-  font-size: 14px;
-  color: #3a4660;
-}
-
-/*empty*/
-.empty-state {
-  max-width: 500px;
-  margin: auto;
-  background: white;
-  padding: 24px;
-  border-radius: 14px;
-  text-align: center;
-}
-
-.empty-state h3 {
-  color: #3a4660;
-  margin-bottom: 6px;
-}
-
-.empty-state p {
-  font-size: 13px;
-  color: #845007;
+@media (max-width: 880px) {
+  .my-complaints-container {
+    padding: 85px 16px 48px;
+  }
+  .complaints-cards-grid {
+    grid-template-columns: 1fr;
+  }
+  .loading-grid {
+    grid-template-columns: 1fr;
+  }
 }

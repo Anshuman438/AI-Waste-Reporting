@@ -1,0 +1,189 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&family=Quicksand:wght@500;600;700;800&family=Space+Grotesk:wght@600;700&display=swap');
+
+:root {
+  --font-main: 'Nunito', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-heading: 'Quicksand', 'Nunito', sans-serif;
+
+  /* Cleanify Eco Living Palette */
+  --brand-forest: #14532d;
+  --brand-deep: #166534;
+  --brand-primary: #15803d;
+  --brand-accent: #22c55e;
+  --brand-leaf: #86efac;
+  --brand-soft-mint: #eef9f1;
+  --brand-mint-light: #f6fcf8;
+  --brand-pastel-bg: #f4fbf6;
+
+  /* Accent Colors */
+  --pastel-green: #e8f8ee;
+  --pastel-pink: #fdf2f2;
+  --pastel-purple: #f5f3ff;
+  --pastel-blue: #f0f9ff;
+  --pastel-yellow: #fffbeb;
+
+  --text-dark: #14281d;
+  --text-body: #324b3b;
+  --text-muted: #5e7a68;
+  --text-light: #8fa898;
+
+  --border-subtle: #e3efe6;
+  --border-card: #dbeef0;
+
+  --radius-sm: 14px;
+  --radius-md: 20px;
+  --radius-lg: 28px;
+  --radius-xl: 36px;
+  --radius-pill: 9999px;
+
+  --shadow-sm: 0 4px 16px rgba(20, 83, 45, 0.04);
+  --shadow-md: 0 10px 30px rgba(20, 83, 45, 0.08);
+  --shadow-lg: 0 20px 48px rgba(20, 83, 45, 0.12);
+  --shadow-glow: 0 0 35px rgba(34, 197, 94, 0.28);
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  width: 100%;
+  max-width: 100vw;
+  min-height: 100%;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  background-color: var(--brand-pastel-bg);
+  font-family: var(--font-main);
+  color: var(--text-dark);
+  line-height: 1.5;
+  scroll-behavior: smooth;
+}
+
+#root {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  color: var(--brand-forest);
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+/* Living Floating & Sway Animations */
+@keyframes floatSlow {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-12px) rotate(4deg); }
+}
+
+@keyframes floatReverse {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(10px) rotate(-3deg); }
+}
+
+@keyframes sway {
+  0%, 100% { transform: rotate(-3deg); }
+  50% { transform: rotate(3deg); }
+}
+
+@keyframes pulseGlow {
+  0%, 100% { transform: scale(1); filter: drop-shadow(0 0 4px rgba(34, 197, 94, 0.4)); }
+  50% { transform: scale(1.05); filter: drop-shadow(0 0 14px rgba(34, 197, 94, 0.7)); }
+}
+
+@keyframes spinSlow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes marqueeScroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes bounceSubtle {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+@keyframes radarWave {
+  0% { transform: scale(0.8); opacity: 0.9; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
+
+.anim-float {
+  animation: floatSlow 4s ease-in-out infinite;
+}
+
+.anim-float-rev {
+  animation: floatReverse 5s ease-in-out infinite;
+}
+
+.anim-sway {
+  animation: sway 3s ease-in-out infinite alternate;
+  transform-origin: bottom center;
+}
+
+.anim-pulse {
+  animation: pulseGlow 2.5s ease-in-out infinite;
+}
+
+.anim-spin-slow {
+  animation: spinSlow 20s linear infinite;
+}
+
+.anim-bounce {
+  animation: bounceSubtle 2s ease-in-out infinite;
+}
+
+/* Full Width Marquee Strip */
+.marquee-container {
+  width: 100vw;
+  overflow: hidden;
+  background: var(--brand-forest);
+  color: #ffffff;
+  padding: 12px 0;
+  display: flex;
+  white-space: nowrap;
+  box-shadow: 0 4px 14px rgba(20, 83, 45, 0.15);
+}
+
+.marquee-content {
+  display: flex;
+  gap: 48px;
+  animation: marqueeScroll 25s linear infinite;
+}
+
+.marquee-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.marquee-item span.highlight {
+  color: #86efac;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: #eaf5ee;
+}
+::-webkit-scrollbar-thumb {
+  background: #a9d4b6;
+  border-radius: var(--radius-pill);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #6eb782;
+}

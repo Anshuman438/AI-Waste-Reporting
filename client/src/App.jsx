@@ -13,30 +13,27 @@ import AdminRoute from "./components/AdminRoute";
 import UserDashboard from "./pages/UserDashboard";
 import MyComplaints from "./pages/MyComplaints";
 import Navbar from "./components/Navbar";
+import Footer from "./components/Footer";
 import Landing from "./pages/Landing";
 import Register from "./pages/Register";
 
 function App() {
   const location = useLocation();
 
-  // Hide Navbar on landing & login
-  const hideNavbarRoutes = ["/", "/login"];
-  const shouldHideNavbar = hideNavbarRoutes.includes(
-    location.pathname
-  );
+  // Hide Navbar and Footer on auth login, register, and dedicated admin portal
+  const hideLayoutRoutes = ["/login", "/register", "/admin"];
+  const shouldHideLayout = hideLayoutRoutes.includes(location.pathname);
 
   return (
     <>
-      {!shouldHideNavbar && <Navbar />}
+      {!shouldHideLayout && <Navbar />}
 
       <Routes>
-
         {/* Landing Page */}
         <Route path="/" element={<Landing />} />
 
-        {/* Login */}
+        {/* Login & Register */}
         <Route path="/login" element={<Login />} />
-
         <Route path="/register" element={<Register />} />
 
         {/* User Routes */}
@@ -51,11 +48,7 @@ function App() {
 
         <Route
           path="/report"
-          element={
-            <ProtectedRoute>
-              <ReportWaste />
-            </ProtectedRoute>
-          }
+          element={<ReportWaste />}
         />
 
         <Route
@@ -82,10 +75,9 @@ function App() {
           path="*"
           element={<Navigate to="/" />}
         />
-
-
-
       </Routes>
+
+      {!shouldHideLayout && <Footer />}
     </>
   );
 }
