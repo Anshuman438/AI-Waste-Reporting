@@ -13,6 +13,7 @@ import {
 import "./ChangePasswordModal.css";
 
 import { API } from "../config/api";
+import { changeAdminPasswordService } from "../services/tidbService";
 
 const ChangePasswordModal = ({ isOpen, onClose }) => {
   const [currentPassword, setCurrentPassword] = useState("");
@@ -71,27 +72,18 @@ const ChangePasswordModal = ({ isOpen, onClose }) => {
     setLoading(true);
 
     try {
-      const res = await axios.post(
-        `${API}/api/auth/change-password`,
-        { currentPassword, newPassword },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const result = await changeAdminPasswordService(currentPassword, newPassword, token);
 
-      setSuccess(res.data?.message || "Password updated successfully!");
-      setTimeout(() => {
-        handleClose();
-      }, 1600);
-    } catch (err) {
-      // If server error or demo offline session fallback:
-      if (err.response?.data?.message) {
-        setError(err.response.data.message);
-      } else {
-        // Fallback simulation for offline demo credentials
-        setSuccess("Password successfully changed for current admin session.");
+      if (result.success) {
+        setSuccess(result.message || "Password updated successfully in database!");
         setTimeout(() => {
           handleClose();
         }, 1600);
+      } else {
+        setError(result.message || "Failed to update password.");
       }
+    } catch (err) {
+      setError("Error updating password: " + err.message);
     } finally {
       setLoading(false);
     }

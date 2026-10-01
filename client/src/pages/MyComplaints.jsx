@@ -19,6 +19,7 @@ import { LuLeaf, LuSparkles, LuCrown } from "react-icons/lu";
 import "./MyComplaints.css";
 
 import { API } from "../config/api";
+import { fetchUserComplaintsService } from "../services/tidbService";
 
 const MyComplaints = () => {
   const navigate = useNavigate();
@@ -42,7 +43,7 @@ const MyComplaints = () => {
 
     const interval = setInterval(() => {
       fetchData(true);
-    }, 5000);
+    }, 4000);
 
     return () => {
       clearInterval(interval);
@@ -55,17 +56,13 @@ const MyComplaints = () => {
     if (!isBackground) setLoading(true);
     try {
       const token = localStorage.getItem("token");
-      if (!token) {
-        if (!isBackground) setLoading(false);
-        return;
-      }
+      const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+      const userEmail = currentUser.email || "";
 
-      const res = await axios.get(`${API}/api/complaints/my`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const userReports = await fetchUserComplaintsService(token, userEmail);
 
-      if (res.data && Array.isArray(res.data)) {
-        setComplaints(res.data);
+      if (Array.isArray(userReports)) {
+        setComplaints(userReports);
       }
     } catch (error) {
       console.log("Fetching user complaints note:", error.message);

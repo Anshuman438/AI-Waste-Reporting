@@ -36,6 +36,10 @@ import "./AdminDashboard.css";
 ChartJS.register(ArcElement, Tooltip, Legend);
 
 import { API } from "../config/api";
+import { 
+  fetchAllComplaintsService, 
+  updateComplaintStatusService 
+} from "../services/tidbService";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -74,23 +78,15 @@ const AdminDashboard = () => {
     if (!isBackground) setLoading(true);
     try {
       const token = localStorage.getItem("token");
-      const res = await axios.get(`${API}/api/complaints`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (res.data && Array.isArray(res.data) && res.data.length > 0) {
-        setComplaints(res.data);
+      const list = await fetchAllComplaintsService(token);
+      if (Array.isArray(list)) {
+        setComplaints(list);
       }
     } catch (error) {
-      console.log("Using cached/live complaints telemetry data");
+      console.log("Using live complaints telemetry note:", error.message);
     } finally {
       if (!isBackground) setLoading(false);
     }
-  };
-
-  const handleResetDemoData = () => {
-    setComplaints(defaultMockComplaints);
-    localStorage.setItem("admin_complaints_data", JSON.stringify(defaultMockComplaints));
   };
 
   const updateStatus = async (id, status) => {
@@ -98,20 +94,13 @@ const AdminDashboard = () => {
 
     // Optimistic local state update
     setComplaints((prev) =>
-      prev.map((c) => (c._id === id ? { ...c, status } : c))
+      prev.map((c) => ((c._id === id || c.id === id) ? { ...c, status } : c))
     );
 
     try {
       const token = localStorage.getItem("token");
-      await axios.put(
-        `${API}/api/complaints/${id}/status`,
-        { status },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      await updateComplaintStatusService(id, status, token);
     } catch (error) {
-      // Local state already updated cleanly
     } finally {
       setUpdatingId(null);
     }

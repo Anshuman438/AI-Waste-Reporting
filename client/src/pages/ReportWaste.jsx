@@ -27,6 +27,7 @@ import GoogleAuthButton from "../components/GoogleAuthButton";
 import "./ReportWaste.css";
 
 import { API } from "../config/api";
+import { submitComplaintService } from "../services/tidbService";
 
 const ReportWaste = () => {
   const navigate = useNavigate();
@@ -255,20 +256,22 @@ const ReportWaste = () => {
     };
 
     try {
-      const res = await axios.post(`${API}/api/complaints`, payload, {
-        headers: { 
-          Authorization: `Bearer ${authToken}`,
-          "Content-Type": "application/json" 
-        },
-      });
+      const savedResult = await submitComplaintService(payload, authToken);
 
-      if (res.data) {
-        // Prepend to local user reports cache for immediate feedback
+      if (savedResult) {
         try {
           const rawUser = localStorage.getItem("user_complaints_data");
           const userList = rawUser ? JSON.parse(rawUser) : [];
           if (Array.isArray(userList)) {
-            localStorage.setItem("user_complaints_data", JSON.stringify([res.data, ...userList]));
+            localStorage.setItem("user_complaints_data", JSON.stringify([savedResult, ...userList]));
+          }
+        } catch (e) {}
+
+        try {
+          const rawAdmin = localStorage.getItem("admin_complaints_data");
+          const adminList = rawAdmin ? JSON.parse(rawAdmin) : [];
+          if (Array.isArray(adminList)) {
+            localStorage.setItem("admin_complaints_data", JSON.stringify([savedResult, ...adminList]));
           }
         } catch (e) {}
       }
@@ -279,33 +282,6 @@ const ReportWaste = () => {
       handleClear();
     } catch (error) {
       console.error("Submission error:", error);
-      // Fallback local report
-      const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
-      const localNewComplaint = {
-        _id: "comp-" + Date.now(),
-        id: "comp-" + Date.now(),
-        imageUrl: imagePayload,
-        wasteType: prediction,
-        description: description || "Civic waste reported via safAI.",
-        location: location || { lat: 22.5726, lng: 88.3639, address: "Civic Reported Area" },
-        status: "pending",
-        reportedBy: {
-          name: currentUser.name || "Citizen Reporter",
-          email: currentUser.email || "citizen@safai.org"
-        },
-        createdAt: new Date().toISOString()
-      };
-
-      try {
-        const rawUser = localStorage.getItem("user_complaints_data");
-        const userList = rawUser ? JSON.parse(rawUser) : [];
-        if (Array.isArray(userList)) {
-          localStorage.setItem("user_complaints_data", JSON.stringify([localNewComplaint, ...userList]));
-        }
-      } catch (e) {}
-
-      window.dispatchEvent(new Event("new_complaint_reported"));
-      window.dispatchEvent(new Event("storage"));
       setSuccess(true);
       handleClear();
     } finally {
