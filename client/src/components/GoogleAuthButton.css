@@ -34,6 +34,21 @@
   flex-shrink: 0;
 }
 
+.google-auth-wrapper {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.google-auth-error-msg {
+  font-size: 0.8rem;
+  color: #ef4444;
+  text-align: center;
+  margin: 0;
+  font-weight: 600;
+}
+
 /* Modal Selector */
 .google-modal-backdrop {
   position: fixed;
