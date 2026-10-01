@@ -20,40 +20,36 @@ app.use(cors({
   origin: true,
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept"]
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept", "x-user-email", "x-user-id", "x-user-role"]
 }));
 
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 
-// Root & API Health checks
-app.get("/api/health", (req, res) => {
-  res.status(200).json({ status: "ok", message: "safAI API running successfully" });
+// Route debugging logger
+app.use((req, res, next) => {
+  console.log(`[safAI API] ${req.method} ${req.url} (originalUrl: ${req.originalUrl})`);
+  next();
 });
-app.get("/health", (req, res) => {
+
+// Root & API Health checks
+app.get(["/api/health", "/health"], (req, res) => {
   res.status(200).json({ status: "ok", message: "safAI API running successfully" });
 });
 
 // Live Database Diagnostic & Auto-Provisioning endpoint
 const { checkTiDBStatus } = require("./config/tidb");
-app.get("/api/test-db", async (req, res) => {
-  const result = await checkTiDBStatus();
-  return res.status(result.connected ? 200 : 500).json(result);
-});
-app.get("/test-db", async (req, res) => {
+app.get(["/api/test-db", "/test-db"], async (req, res) => {
   const result = await checkTiDBStatus();
   return res.status(result.connected ? 200 : 500).json(result);
 });
 
-// Dual mounting to handle both standard and serverless rewrites
-app.use("/api/auth", authRoutes);
-app.use("/auth", authRoutes);
+// Routes mounting
+app.use(["/api/auth", "/auth"], authRoutes);
+app.use(["/api/complaints", "/complaints"], complaintRoutes);
 
-app.use("/api/complaints", complaintRoutes);
-app.use("/complaints", complaintRoutes);
-
-app.get("/", (req, res) => {
-  res.send("safAI API is running...");
+app.get(["/api", "/"], (req, res) => {
+  res.status(200).json({ status: "ok", message: "safAI Smart Waste Management API" });
 });
 
 // Start local server if not running as a Vercel serverless function
