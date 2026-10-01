@@ -34,7 +34,6 @@ const createComplaint = async (req, res) => {
           });
           imageUrl = await uploadPromise;
         } catch (cloudErr) {
-          console.warn("Cloudinary upload note:", cloudErr.message);
           imageUrl = `data:${req.file.mimetype || 'image/jpeg'};base64,${req.file.buffer.toString("base64")}`;
         }
       } else {
@@ -52,9 +51,9 @@ const createComplaint = async (req, res) => {
       }
     }
 
-    const reporterId = req.user?._id || req.user?.id || "usr-" + Date.now();
-    const reporterName = req.user?.name || "Citizen Reporter";
-    const reporterEmail = req.user?.email || "citizen@safai.org";
+    const reporterId = req.user?._id || req.user?.id || req.headers["x-user-id"] || "usr-" + Date.now();
+    const reporterName = req.user?.name || req.body?.reportedByName || "Citizen Reporter";
+    const reporterEmail = (req.user?.email || req.headers["x-user-email"] || req.body?.reportedByEmail || "citizen@safai.org").toLowerCase().trim();
 
     let savedComplaint = null;
 
@@ -82,30 +81,32 @@ const createComplaint = async (req, res) => {
 
     // 2. Insert into MongoDB if available
     try {
-      const mongoResult = await Complaint.create({
-        imageUrl,
-        wasteType: wasteType || "mixed",
-        description: description || "Civic waste reported via safAI.",
-        location: parsedLocation,
-        reportedBy: reporterId,
-        status: "pending"
-      });
-      if (!savedComplaint && mongoResult) {
-        savedComplaint = {
-          _id: String(mongoResult._id),
-          id: String(mongoResult._id),
+      if (Complaint && Complaint.create) {
+        const mongoResult = await Complaint.create({
           imageUrl,
-          wasteType: mongoResult.wasteType,
-          description: mongoResult.description,
+          wasteType: wasteType || "mixed",
+          description: description || "Civic waste reported via safAI.",
           location: parsedLocation,
-          status: "pending",
-          reportedBy: {
-            _id: reporterId,
-            name: reporterName,
-            email: reporterEmail
-          },
-          createdAt: mongoResult.createdAt || new Date().toISOString()
-        };
+          reportedBy: reporterId,
+          status: "pending"
+        });
+        if (!savedComplaint && mongoResult) {
+          savedComplaint = {
+            _id: String(mongoResult._id),
+            id: String(mongoResult._id),
+            imageUrl,
+            wasteType: mongoResult.wasteType,
+            description: mongoResult.description,
+            location: parsedLocation,
+            status: "pending",
+            reportedBy: {
+              _id: reporterId,
+              name: reporterName,
+              email: reporterEmail
+            },
+            createdAt: mongoResult.createdAt || new Date().toISOString()
+          };
+        }
       }
     } catch (mongoErr) {
       console.warn("MongoDB complaint save note:", mongoErr.message);
@@ -131,7 +132,7 @@ const createComplaint = async (req, res) => {
     }
 
     inMemoryComplaints.unshift(savedComplaint);
-    console.log(`✅ Complaint reported by [${reporterEmail}]: ${savedComplaint._id || savedComplaint.id}`);
+    console.log(`✅ Complaint recorded for [${reporterEmail}]: ${savedComplaint._id || savedComplaint.id}`);
 
     return res.status(201).json(savedComplaint);
 
@@ -149,8 +150,8 @@ const createComplaint = async (req, res) => {
 // ======================
 const getUserComplaints = async (req, res) => {
   try {
-    const userId = String(req.user?._id || req.user?.id || "");
-    const userEmail = (req.user?.email || "").toLowerCase().trim();
+    const userId = String(req.user?._id || req.user?.id || req.headers["x-user-id"] || "");
+    const userEmail = (req.user?.email || req.headers["x-user-email"] || "").toLowerCase().trim();
 
     let userComplaints = [];
 
@@ -188,7 +189,7 @@ const getUserComplaints = async (req, res) => {
                 status: m.status,
                 reportedBy: {
                   _id: userId,
-                  name: req.user?.name,
+                  name: req.user?.name || "Citizen Reporter",
                   email: userEmail
                 },
                 createdAt: m.createdAt
@@ -199,11 +200,12 @@ const getUserComplaints = async (req, res) => {
       }
     } catch (e) {}
 
-    // 3. Memory
+    // 3. Memory fallback
     for (const mem of inMemoryComplaints) {
       const matches = 
         (mem.reportedBy?.email && mem.reportedBy.email.toLowerCase() === userEmail) ||
-        (mem.reportedBy?._id && String(mem.reportedBy._id) === userId);
+        (mem.reportedBy?._id && String(mem.reportedBy._id) === userId) ||
+        !userEmail; // If unauthenticated query, return memory queue
 
       if (matches) {
         const exists = userComplaints.some(c => String(c.id || c._id) === String(mem.id || mem._id));
@@ -260,9 +262,13 @@ const getAllComplaints = async (req, res) => {
                 wasteType: mc.wasteType,
                 description: mc.description,
                 location: mc.location,
-                status: mc.status || "pending",
-                reportedBy: mc.reportedBy || { name: "Citizen Reporter", email: "citizen@safai.org" },
-                createdAt: mc.createdAt || new Date().toISOString()
+                status: mc.status,
+                reportedBy: {
+                  _id: mc.reportedBy?._id,
+                  name: mc.reportedBy?.name || "Citizen Reporter",
+                  email: mc.reportedBy?.email || "citizen@safai.org"
+                },
+                createdAt: mc.createdAt
               });
             }
           }
@@ -270,7 +276,7 @@ const getAllComplaints = async (req, res) => {
       }
     } catch (e) {}
 
-    // 3. Memory
+    // 3. Memory fallback
     for (const mem of inMemoryComplaints) {
       const exists = allComplaints.some(c => String(c.id || c._id) === String(mem.id || mem._id));
       if (!exists) {
@@ -285,48 +291,49 @@ const getAllComplaints = async (req, res) => {
 
   } catch (error) {
     console.error("Get All Complaints Error:", error);
-    return res.status(500).json({ message: "Server error fetching complaints" });
+    return res.status(500).json({ message: "Server error retrieving complaints" });
   }
 };
 
 
 // ======================
-// ADMIN: UPDATE STATUS
+// UPDATE COMPLAINT STATUS (ADMIN)
 // ======================
 const updateComplaintStatus = async (req, res) => {
   try {
     const { status } = req.body;
-    const complaintId = req.params.id;
+    const { id } = req.params;
 
-    // TiDB
-    await tidbUpdateComplaintStatus(complaintId, status);
+    if (!["pending", "in-progress", "resolved"].includes(status)) {
+      return res.status(400).json({ message: "Invalid status value. Must be pending, in-progress, or resolved." });
+    }
 
-    // MongoDB
+    // 1. Update in TiDB
     try {
-      if (Complaint && Complaint.findById) {
-        const complaint = await Complaint.findById(complaintId);
-        if (complaint) {
-          complaint.status = status || complaint.status;
-          await complaint.save();
-        }
+      await tidbUpdateComplaintStatus(id, status);
+    } catch (e) {}
+
+    // 2. Update in MongoDB
+    try {
+      if (Complaint && Complaint.findByIdAndUpdate) {
+        await Complaint.findByIdAndUpdate(id, { status });
       }
     } catch (e) {}
 
-    // Memory
-    const memItem = inMemoryComplaints.find(c => String(c._id || c.id) === String(complaintId));
-    if (memItem) {
-      memItem.status = status;
-    }
+    // 3. Update in memory cache
+    inMemoryComplaints = inMemoryComplaints.map(c => 
+      (c._id === id || c.id === id) ? { ...c, status } : c
+    );
 
     return res.status(200).json({
-      message: "Complaint status updated successfully",
-      id: complaintId,
+      message: `Complaint status successfully updated to ${status}`,
+      id,
       status
     });
 
   } catch (error) {
-    console.error("Update Complaint Error:", error);
-    return res.status(500).json({ message: "Server error updating status" });
+    console.error("Update Status Error:", error);
+    return res.status(500).json({ message: "Server error updating complaint status" });
   }
 };
 
@@ -336,31 +343,30 @@ const updateComplaintStatus = async (req, res) => {
 // ======================
 const deleteComplaint = async (req, res) => {
   try {
-    const complaintId = req.params.id;
+    const { id } = req.params;
 
-    // TiDB
-    await tidbDeleteComplaint(complaintId);
+    // 1. Delete from TiDB
+    try {
+      await tidbDeleteComplaint(id);
+    } catch (e) {}
 
-    // MongoDB
+    // 2. Delete from MongoDB
     try {
       if (Complaint && Complaint.findByIdAndDelete) {
-        await Complaint.findByIdAndDelete(complaintId);
+        await Complaint.findByIdAndDelete(id);
       }
     } catch (e) {}
 
-    // Memory
-    inMemoryComplaints = inMemoryComplaints.filter(c => String(c._id || c.id) !== String(complaintId));
+    // 3. Delete from memory cache
+    inMemoryComplaints = inMemoryComplaints.filter(c => c._id !== id && c.id !== id);
 
-    return res.status(200).json({
-      message: "Complaint removed successfully"
-    });
+    return res.status(200).json({ message: "Complaint deleted successfully", id });
 
   } catch (error) {
     console.error("Delete Complaint Error:", error);
     return res.status(500).json({ message: "Server error deleting complaint" });
   }
 };
-
 
 module.exports = {
   createComplaint,

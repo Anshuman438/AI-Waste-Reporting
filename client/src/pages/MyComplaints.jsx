@@ -19,7 +19,7 @@ import { LuLeaf, LuSparkles, LuCrown } from "react-icons/lu";
 import "./MyComplaints.css";
 
 import { API } from "../config/api";
-import { fetchUserComplaintsService } from "../services/tidbService";
+import { fetchUserComplaintsService, deleteComplaintService } from "../services/tidbService";
 
 const MyComplaints = () => {
   const navigate = useNavigate();
@@ -33,7 +33,7 @@ const MyComplaints = () => {
   useEffect(() => {
     fetchData();
 
-    // Auto-refresh when new complaint is reported
+    // Auto-refresh when new complaint is reported or updated
     const handleSync = () => {
       fetchData(true);
     };
@@ -43,7 +43,7 @@ const MyComplaints = () => {
 
     const interval = setInterval(() => {
       fetchData(true);
-    }, 4000);
+    }, 3500);
 
     return () => {
       clearInterval(interval);
@@ -77,15 +77,13 @@ const MyComplaints = () => {
 
     try {
       const token = localStorage.getItem("token");
-      await axios.delete(`${API}/api/complaints/${deleteModalId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await deleteComplaintService(deleteModalId, token);
     } catch (error) {
       // Handled locally
     }
 
     setComplaints((prev) =>
-      prev.filter((complaint) => complaint._id !== deleteModalId)
+      prev.filter((complaint) => (complaint._id !== deleteModalId && complaint.id !== deleteModalId))
     );
     setDeleteModalId(null);
     setDeleting(false);
@@ -148,215 +146,203 @@ const MyComplaints = () => {
             <div className="header-top-tag-row">
               <button 
                 type="button" 
-                className="btn-back-home"
+                className="btn-royal-back-sub"
                 onClick={() => navigate("/")}
               >
                 <FiArrowLeft size={15} />
-                <span>Back to Home</span>
+                <span>Home</span>
               </button>
+              <div className="royal-tag-capsule">
+                <LuLeaf size={14} />
+                <span>My Civic Reports</span>
+              </div>
             </div>
-
-            <h1 className="royal-complaints-title">My Waste Reports</h1>
-            <p className="royal-complaints-sub">
-              Live inspection timeline, GPS tracking, and municipal cleanup status for your civic reports.
+            <h1 className="my-complaints-title">Activity & History</h1>
+            <p className="my-complaints-subtitle">
+              Live tracking of all civic waste incidents you've reported across the municipal network.
             </p>
           </div>
 
           <div className="header-right-col">
+            <div className="points-summary-card animate-glow">
+              <div className="points-icon-badge">
+                <FiAward size={22} />
+              </div>
+              <div className="points-info">
+                <div className="points-label">Total Green Points</div>
+                <div className="points-num">
+                  <span>{totalPoints}</span>
+                  <span className="points-unit">XP</span>
+                </div>
+              </div>
+            </div>
+
             <button 
               type="button" 
-              className="btn-royal-new-report"
+              className="btn-report-new-top"
               onClick={() => navigate("/report")}
             >
-              <FiPlus size={18} />
-              <span>Report New Waste Spot</span>
+              <FiPlus size={16} />
+              <span>Report New Spot</span>
             </button>
           </div>
         </div>
 
-        {/* Filter Tabs Bar */}
-        <div className="complaints-filter-bar">
-          <div className="filter-tab-group">
+        {/* Filter Navigation Tabs */}
+        <div className="complaints-tab-bar">
+          <div className="tabs-left">
             <button 
               type="button"
-              className={`filter-pill-btn ${activeTab === "all" ? "active" : ""}`}
+              className={`c-tab-btn ${activeTab === "all" ? "tab-active" : ""}`}
               onClick={() => setActiveTab("all")}
             >
               <span>All Reports</span>
-              <span className="tab-count-bubble">{complaints.length}</span>
+              <span className="tab-counter">{complaints.length}</span>
             </button>
             <button 
               type="button"
-              className={`filter-pill-btn ${activeTab === "pending" ? "active" : ""}`}
+              className={`c-tab-btn ${activeTab === "pending" ? "tab-active" : ""}`}
               onClick={() => setActiveTab("pending")}
             >
-              <span>⏳ Pending</span>
-              <span className="tab-count-bubble">
-                {complaints.filter(c => c.status === "pending").length}
+              <span>Pending</span>
+              <span className="tab-counter">
+                {complaints.filter((c) => c.status === "pending").length}
               </span>
             </button>
             <button 
               type="button"
-              className={`filter-pill-btn ${activeTab === "in-progress" ? "active" : ""}`}
+              className={`c-tab-btn ${activeTab === "in-progress" ? "tab-active" : ""}`}
               onClick={() => setActiveTab("in-progress")}
             >
-              <span>🚚 In Progress</span>
-              <span className="tab-count-bubble">
-                {complaints.filter(c => c.status === "in-progress").length}
+              <span>In Progress</span>
+              <span className="tab-counter">
+                {complaints.filter((c) => c.status === "in-progress").length}
               </span>
             </button>
             <button 
               type="button"
-              className={`filter-pill-btn ${activeTab === "resolved" ? "active" : ""}`}
+              className={`c-tab-btn ${activeTab === "resolved" ? "tab-active" : ""}`}
               onClick={() => setActiveTab("resolved")}
             >
-              <span>✅ Resolved</span>
-              <span className="tab-count-bubble">
-                {complaints.filter(c => c.status === "resolved").length}
+              <span>Resolved</span>
+              <span className="tab-counter">
+                {complaints.filter((c) => c.status === "resolved").length}
               </span>
             </button>
           </div>
         </div>
 
-        {/* Cards Grid or Empty State */}
-        {loading ? (
-          <div className="loading-grid">
-            {[1, 2, 3].map((n) => (
-              <div key={n} className="complaint-skeleton-card">
-                <div className="skeleton-img"></div>
-                <div className="skeleton-content">
-                  <div className="skeleton-line short"></div>
-                  <div className="skeleton-line medium"></div>
-                </div>
-              </div>
-            ))}
+        {/* Complaints Grid Content */}
+        {loading && complaints.length === 0 ? (
+          <div className="complaints-loading-state">
+            <div className="royal-spinner"></div>
+            <p>Syncing civic reports with database...</p>
           </div>
         ) : filteredComplaints.length === 0 ? (
-          /* Cozy Empty State Card */
-          <div className="empty-complaints-card animate-fade-in">
-            <div className="empty-icon-circle">
-              <LuLeaf size={34} />
+          <div className="complaints-empty-card animate-fade-in">
+            <div className="empty-icon-box">
+              <FiTrash2 size={34} />
             </div>
-            <h3>No reports found in this tab</h3>
+            <h3>No reports found</h3>
             <p>
-              {activeTab === "all"
-                ? "You haven't submitted any civic waste reports yet. Snap a photo to clean your campus and earn XP!"
-                : `You currently have 0 complaints with status '${activeTab}'.`}
+              {activeTab === "all" 
+                ? "You haven't submitted any civic waste reports yet. Help keep your city clean by reporting a spot!" 
+                : `No reports currently under the '${activeTab}' filter.`}
             </p>
             <button 
-              type="button"
-              className="btn-royal-new-report"
+              type="button" 
+              className="btn-empty-create"
               onClick={() => navigate("/report")}
             >
-              <FiPlus size={18} />
-              <span>Submit Your First Report</span>
+              <FiPlus size={16} />
+              <span>Report Waste Now</span>
             </button>
           </div>
         ) : (
-          /* Complaint Cards Grid */
-          <div className="complaints-cards-grid">
-            {filteredComplaints.map((c) => (
-              <div key={c._id} className="user-complaint-card animate-fade-in">
-                
-                {/* Top Image Preview */}
-                <div className="complaint-img-wrap">
-                  <img src={c.imageUrl} alt="Reported waste" className="complaint-card-img" />
-                  <div className="badge-overlay">
-                    <span className={`badge-category badge-${c.wasteType?.toLowerCase()}`}>
-                      {c.wasteType ? (c.wasteType.charAt(0).toUpperCase() + c.wasteType.slice(1)) : "Civic"}
-                    </span>
-                  </div>
-                  {c.aiConfidence && (
-                    <div className="ai-conf-pill">
-                      <span>⚡ {c.aiConfidence}% AI Conf.</span>
+          <div className="complaints-grid-layout animate-fade-in">
+            {filteredComplaints.map((item) => {
+              const compId = item._id || item.id;
+              const wasteType = (item.wasteType || "mixed").toLowerCase();
+
+              return (
+                <div key={compId} className="complaint-royal-card">
+                  {/* Card Image Banner */}
+                  <div className="complaint-card-media">
+                    <img 
+                      src={item.imageUrl || "https://images.unsplash.com/photo-1530587191325-3db32d826c18?w=500&auto=format&fit=crop&q=80"} 
+                      alt="Reported waste spot" 
+                      className="complaint-img-cover" 
+                    />
+                    <div className="media-overlay-badges">
+                      <span className={`waste-type-tag tag-${wasteType}`}>
+                        {wasteType === "biodegradable" ? "🌿 Organic" : wasteType === "plastic" ? "🧴 Plastic" : "🥫 Metal"}
+                      </span>
+                      {getStatusBadge(item.status)}
                     </div>
-                  )}
+                  </div>
+
+                  {/* Card Body */}
+                  <div className="complaint-card-body">
+                    <div className="complaint-date-row">
+                      <div className="date-item">
+                        <FiCalendar size={13} />
+                        <span>{formatDate(item.createdAt)}</span>
+                      </div>
+                      <span className="complaint-id-badge">ID: {String(compId).slice(-6)}</span>
+                    </div>
+
+                    <p className="complaint-desc-text">
+                      {item.description || "Civic waste reported via safAI AI Neural Triage."}
+                    </p>
+
+                    <div className="complaint-meta-row">
+                      <div className="loc-item">
+                        <FiMapPin size={14} className="loc-icon" />
+                        <span title={item.location?.address}>
+                          {item.location?.address || "Civic Coordinates Captured"}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Footer Actions */}
+                    <div className="complaint-card-footer">
+                      <div className="reward-earned-chip">
+                        <LuSparkles size={13} />
+                        <span>+50 XP Earned</span>
+                      </div>
+
+                      <button 
+                        type="button" 
+                        className="btn-delete-report"
+                        title="Delete report"
+                        onClick={() => setDeleteModalId(compId)}
+                      >
+                        <FiTrash2 size={15} />
+                      </button>
+                    </div>
+                  </div>
                 </div>
-
-                {/* Card Body */}
-                <div className="complaint-card-body">
-                  
-                  <div className="complaint-card-meta">
-                    {getStatusBadge(c.status)}
-                    <span className="report-time">
-                      <FiCalendar size={12} /> {formatDate(c.createdAt)}
-                    </span>
-                  </div>
-
-                  <h3 className="complaint-type-title">
-                    {c.wasteType ? `${c.wasteType.charAt(0).toUpperCase() + c.wasteType.slice(1)} Waste Spot` : "Civic Waste Complaint"}
-                  </h3>
-
-                  <p className="complaint-desc-text">
-                    {c.description && c.description.trim() !== ""
-                      ? c.description
-                      : "Photo submitted via mobile camera."}
-                  </p>
-
-                  {/* Location & GPS */}
-                  {(c.locationName || c.location?.lat) && (
-                    <div className="complaint-location-tag">
-                      <FiMapPin size={13} className="pin-icon" />
-                      <span>{c.locationName || `${c.location.lat.toFixed(4)}, ${c.location.lng.toFixed(4)}`}</span>
-                    </div>
-                  )}
-
-                  {/* 3-Step Live Status Tracker */}
-                  <div className="status-stepper-box">
-                    <div className="stepper-labels">
-                      <span className="active">Logged</span>
-                      <span className={c.status === "in-progress" || c.status === "resolved" ? "active" : ""}>Dispatched</span>
-                      <span className={c.status === "resolved" ? "active" : ""}>Cleared</span>
-                    </div>
-                    <div className="stepper-bar-track">
-                      <div 
-                        className="stepper-bar-fill"
-                        style={{
-                          width: c.status === "resolved" ? "100%" : c.status === "in-progress" ? "55%" : "15%"
-                        }}
-                      ></div>
-                    </div>
-                  </div>
-
-                  {/* Card Actions Footer */}
-                  <div className="complaint-card-actions">
-                    <div className="xp-tag-pill">
-                      <LuSparkles size={13} />
-                      <span>+50 Eco XP</span>
-                    </div>
-
-                    <button 
-                      type="button"
-                      className="btn-delete-report"
-                      onClick={() => setDeleteModalId(c._id)}
-                      title="Remove complaint"
-                    >
-                      <FiTrash2 size={14} />
-                      <span>Delete</span>
-                    </button>
-                  </div>
-
-                </div>
-
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
         {/* Delete Confirmation Modal */}
         {deleteModalId && (
-          <div className="modal-backdrop-overlay animate-fade-in">
-            <div className="modal-dialog-box">
-              <div className="modal-icon-danger">
-                <FiAlertCircle size={28} />
+          <div className="c-modal-overlay" onClick={() => setDeleteModalId(null)}>
+            <div className="c-modal-card animate-pop" onClick={(e) => e.stopPropagation()}>
+              <div className="c-modal-header">
+                <div className="warn-icon-badge">
+                  <FiAlertCircle size={22} />
+                </div>
+                <div className="modal-title-area">
+                  <h3>Delete Civic Report?</h3>
+                  <p>Are you sure you want to delete report #{String(deleteModalId).slice(-6)}? This action cannot be undone.</p>
+                </div>
               </div>
-              <h3>Remove Waste Complaint?</h3>
-              <p>
-                Are you sure you want to delete this report from your activity log? This will remove it from your active tracking queue.
-              </p>
-              <div className="modal-btn-group">
+              <div className="c-modal-actions">
                 <button 
-                  type="button"
+                  type="button" 
                   className="btn-modal-cancel" 
                   onClick={() => setDeleteModalId(null)}
                   disabled={deleting}
@@ -364,12 +350,12 @@ const MyComplaints = () => {
                   Cancel
                 </button>
                 <button 
-                  type="button"
-                  className="btn-modal-danger"
+                  type="button" 
+                  className="btn-modal-delete" 
                   onClick={confirmDeleteComplaint}
                   disabled={deleting}
                 >
-                  {deleting ? "Removing..." : "Delete Report"}
+                  {deleting ? "Deleting..." : "Yes, Delete Report"}
                 </button>
               </div>
             </div>

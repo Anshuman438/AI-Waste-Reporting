@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import bcrypt from "bcryptjs";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { 
   FiMail, 
@@ -16,6 +17,7 @@ import GoogleAuthButton from "../components/GoogleAuthButton";
 import "./Login.css";
 
 import { API } from "../config/api";
+import { getTiDBClient, ensureTiDBTables } from "../services/tidbService";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -62,6 +64,7 @@ const Login = () => {
     const isAdminUser = cleanInput === "admin" || cleanInput === "admin@safai.org";
     const lookupEmail = isAdminUser ? "admin@safai.org" : email.trim();
 
+    // 1. Try Backend API
     try {
       const res = await axios.post(
         `${API}/api/auth/login`,
@@ -71,21 +74,86 @@ const Login = () => {
       localStorage.setItem("token", res.data.token);
       localStorage.setItem("user", JSON.stringify(res.data));
       handleAuthSuccess(res.data);
+      return;
 
     } catch (err) {
-      if (isAdminUser && password === "123456") {
-        // Instant Admin access fallback
-        const adminUser = {
-          _id: "admin-master",
-          name: "Municipal Admin",
-          email: "admin@safai.org",
-          role: "admin",
-          token: "admin-session-" + Date.now()
-        };
-        localStorage.setItem("token", adminUser.token);
-        localStorage.setItem("user", JSON.stringify(adminUser));
-        handleAuthSuccess(adminUser);
-        return;
+      console.log("API Login note:", err.response?.data?.message || err.message);
+
+      // 2. Direct TiDB Cloud Verification
+      const conn = getTiDBClient();
+      if (conn) {
+        try {
+          await ensureTiDBTables(conn);
+          const rows = await conn.execute(
+            `SELECT * FROM users WHERE LOWER(email) = ? LIMIT 1`,
+            [lookupEmail.toLowerCase()]
+          );
+
+          if (rows && rows.length > 0) {
+            const dbUser = rows[0];
+            if (dbUser.password) {
+              const isMatch = await bcrypt.compare(password, dbUser.password);
+              if (isMatch) {
+                const authenticatedUser = {
+                  _id: String(dbUser.id),
+                  id: String(dbUser.id),
+                  name: dbUser.name,
+                  email: dbUser.email,
+                  role: dbUser.role || (isAdminUser ? "admin" : "user"),
+                  token: "tidb-session-" + Date.now(),
+                };
+                localStorage.setItem("token", authenticatedUser.token);
+                localStorage.setItem("user", JSON.stringify(authenticatedUser));
+                handleAuthSuccess(authenticatedUser);
+                return;
+              } else {
+                setError("Incorrect password. Please verify your credentials.");
+                setLoading(false);
+                return;
+              }
+            }
+          }
+        } catch (tidbErr) {
+          console.warn("Direct TiDB Login Note:", tidbErr.message);
+        }
+      }
+
+      // 3. Check locally cached admin password hash
+      if (isAdminUser) {
+        const cachedHash = localStorage.getItem("safai_admin_password_hash");
+        if (cachedHash) {
+          const match = await bcrypt.compare(password, cachedHash);
+          if (match) {
+            const adminUser = {
+              _id: "admin-master",
+              name: "Municipal Admin",
+              email: "admin@safai.org",
+              role: "admin",
+              token: "admin-session-" + Date.now()
+            };
+            localStorage.setItem("token", adminUser.token);
+            localStorage.setItem("user", JSON.stringify(adminUser));
+            handleAuthSuccess(adminUser);
+            return;
+          } else {
+            setError("Incorrect admin password.");
+            setLoading(false);
+            return;
+          }
+        } else if (password === "123456") {
+          // Default initial fallback only if no password has ever been set
+          const adminUser = {
+            _id: "admin-master",
+            name: "Municipal Admin",
+            email: "admin@safai.org",
+            role: "admin",
+            token: "admin-session-" + Date.now()
+          };
+          localStorage.setItem("token", adminUser.token);
+          localStorage.setItem("user", JSON.stringify(adminUser));
+          handleAuthSuccess(adminUser);
+          return;
+        }
       }
 
       setError(
@@ -149,6 +217,7 @@ const Login = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                autoFocus
               />
             </div>
           </div>
@@ -156,34 +225,38 @@ const Login = () => {
           <div className="form-field-group">
             <div className="label-row">
               <label>Password</label>
+              <button 
+                type="button" 
+                className="pwd-toggle-btn"
+                onClick={() => setShowPassword(!showPassword)}
+                tabIndex={-1}
+              >
+                {showPassword ? <FiEyeOff size={14} /> : <FiEye size={14} />}
+                <span>{showPassword ? "Hide" : "Show"}</span>
+              </button>
             </div>
             <div className="input-with-icon">
               <FiLock className="field-icon" />
               <input
                 type={showPassword ? "text" : "password"}
-                placeholder="••••••••"
+                placeholder="Enter password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
               />
-              <button
-                type="button"
-                className="password-toggle-btn"
-                onClick={() => setShowPassword(!showPassword)}
-                tabIndex={-1}
-              >
-                {showPassword ? <FiEyeOff size={18} /> : <FiEye size={18} />}
-              </button>
             </div>
           </div>
 
-          <button
-            type="submit"
+          <button 
+            type="submit" 
             className="btn-auth-submit"
             disabled={loading}
           >
             {loading ? (
-              <div className="btn-spinner"></div>
+              <span className="auth-loading-text">
+                <span className="auth-spinner"></span>
+                <span>Authenticating...</span>
+              </span>
             ) : (
               <>
                 <span>Sign In to safAI</span>
@@ -193,11 +266,38 @@ const Login = () => {
           </button>
         </form>
 
+        {/* Quick Demo Access Bar */}
+        <div className="demo-access-panel">
+          <div className="demo-chips-grid">
+            <button 
+              type="button" 
+              className="btn-demo-chip"
+              onClick={() => {
+                setEmail("admin");
+                setPassword("123456");
+              }}
+            >
+              <FiShield size={14} />
+              <span>Fill Admin Demo</span>
+            </button>
+            <button 
+              type="button" 
+              className="btn-demo-chip"
+              onClick={() => {
+                setEmail("citizen@safai.org");
+                setPassword("123456");
+              }}
+            >
+              <LuSparkles size={14} />
+              <span>Fill Citizen Demo</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Footer Link */}
         <div className="auth-footer-text">
-          Don't have an account?{" "}
-          <Link to="/register" className="auth-link">
-            Create Free Citizen Account
-          </Link>
+          <span>Don't have an account?</span>
+          <Link to={`/register${location.search}`}>Create an Account</Link>
         </div>
 
       </div>
@@ -206,4 +306,3 @@ const Login = () => {
 };
 
 export default Login;
-
