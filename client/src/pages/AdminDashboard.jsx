@@ -233,22 +233,13 @@ const AdminDashboard = () => {
 
             <button 
               type="button"
-              className="btn-secondary btn-reset-demo" 
-              onClick={handleResetDemoData}
-              title="Reset sample civic complaints"
-            >
-              <FiRefreshCw size={15} />
-              <span>Reset Demo Data</span>
-            </button>
-
-            <button 
-              type="button"
               className="btn-primary btn-refresh" 
-              onClick={fetchData} 
+              onClick={() => fetchData()} 
               disabled={loading}
+              title="Refresh live database"
             >
-              <FiZap className={loading ? "spin-icon" : ""} size={16} />
-              <span>Sync Telemetry</span>
+              <FiRefreshCw className={loading ? "spin-icon" : ""} size={16} />
+              <span>{loading ? "Syncing..." : "Live Sync"}</span>
             </button>
           </div>
         </div>
@@ -374,9 +365,9 @@ const AdminDashboard = () => {
               <button 
                 type="button" 
                 className="btn-seed-data-link"
-                onClick={handleResetDemoData}
+                onClick={() => fetchData()}
               >
-                Reset demo complaints
+                Refresh Live Database
               </button>
             </div>
           ) : (
