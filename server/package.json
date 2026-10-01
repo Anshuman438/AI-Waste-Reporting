@@ -13,6 +13,7 @@
   "description": "",
   "dependencies": {
     "@google-cloud/vision": "^5.3.4",
+    "@tidbcloud/serverless": "^0.3.0",
     "axios": "^1.13.5",
     "bcryptjs": "^3.0.3",
     "cloudinary": "^2.9.0",
@@ -21,7 +22,8 @@
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.2.0",
-    "multer": "^2.0.2"
+    "multer": "^2.0.2",
+    "mysql2": "^3.24.5"
   },
   "devDependencies": {
     "nodemon": "^3.1.11"

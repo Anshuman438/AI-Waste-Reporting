@@ -2,12 +2,14 @@ const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
 const connectDB = require("./config/db");
+const { initTiDB } = require("./config/tidb");
 
 const authRoutes = require("./routes/authRoutes");
 const complaintRoutes = require("./routes/complaintRoutes");
 
 dotenv.config();
 connectDB();
+initTiDB();
 
 const app = express();
 

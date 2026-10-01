@@ -11,9 +11,12 @@
   },
   "dependencies": {
     "@tensorflow/tfjs": "^4.22.0",
+    "@tidbcloud/serverless": "^0.3.0",
     "axios": "^1.13.5",
+    "bcryptjs": "^3.0.3",
     "chart.js": "^4.5.1",
     "dotenv": "^17.2.4",
+    "jsonwebtoken": "^9.0.3",
     "leaflet": "^1.9.4",
     "react": "^19.2.0",
     "react-chartjs-2": "^5.3.1",
