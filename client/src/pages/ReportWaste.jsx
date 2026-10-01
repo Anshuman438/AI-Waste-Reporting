@@ -112,6 +112,46 @@ const ReportWaste = () => {
     fetchLocation();
   }, []);
 
+  const [base64Image, setBase64Image] = useState("");
+
+  // Helper to convert and compress image to base64 Data URL
+  const compressImageToBase64 = (file) => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          const MAX_WIDTH = 900;
+          const MAX_HEIGHT = 900;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height = Math.round((height * MAX_WIDTH) / width);
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width = Math.round((width * MAX_HEIGHT) / height);
+              height = MAX_HEIGHT;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, width, height);
+          const dataUrl = canvas.toDataURL("image/jpeg", 0.78);
+          resolve(dataUrl);
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
   // Run AI Model Inference on Image
   const processImagePrediction = async (selectedFile) => {
     if (!selectedFile) return;
@@ -121,6 +161,11 @@ const ReportWaste = () => {
     setPreview(objectUrl);
     setLoading(true);
     setSuccess(false);
+
+    // Compress image to base64 for instant upload and storage
+    compressImageToBase64(selectedFile).then((b64) => {
+      setBase64Image(b64);
+    });
 
     if (!model) {
       // Graceful fallback with realistic classification
@@ -185,6 +230,7 @@ const ReportWaste = () => {
   const handleClear = () => {
     setFile(null);
     setPreview(null);
+    setBase64Image("");
     setPrediction("");
     setConfidence(0);
     setProbabilities([]);
@@ -197,28 +243,32 @@ const ReportWaste = () => {
     if (!file || !prediction) return;
     setSubmitting(true);
 
-    const formData = new FormData();
-    formData.append("image", file);
-    formData.append("wasteType", prediction);
-    formData.append("description", description);
-    formData.append("location", JSON.stringify(location || { lat: 22.5726, lng: 88.3639 }));
+    const imagePayload = base64Image || preview || "https://images.unsplash.com/photo-1530587191325-3db32d826c18?w=500&auto=format&fit=crop&q=80";
+
+    const payload = {
+      image: imagePayload,
+      imageUrl: imagePayload,
+      wasteType: prediction,
+      description: description || "Civic waste reported via safAI.",
+      location: location || { lat: 22.5726, lng: 88.3639, address: "Civic Reported Location" },
+      aiConfidence: confidence
+    };
 
     try {
-      const res = await axios.post(`${API}/api/complaints`, formData, {
+      const res = await axios.post(`${API}/api/complaints`, payload, {
         headers: { 
           Authorization: `Bearer ${authToken}`,
-          "Content-Type": "multipart/form-data" 
+          "Content-Type": "application/json" 
         },
       });
 
       if (res.data) {
-        // Optimistically prepend to admin cache
+        // Prepend to local user reports cache for immediate feedback
         try {
-          const raw = localStorage.getItem("admin_complaints_data");
-          const existing = raw ? JSON.parse(raw) : [];
-          if (Array.isArray(existing)) {
-            const updated = [res.data, ...existing];
-            localStorage.setItem("admin_complaints_data", JSON.stringify(updated));
+          const rawUser = localStorage.getItem("user_complaints_data");
+          const userList = rawUser ? JSON.parse(rawUser) : [];
+          if (Array.isArray(userList)) {
+            localStorage.setItem("user_complaints_data", JSON.stringify([res.data, ...userList]));
           }
         } catch (e) {}
       }
@@ -228,12 +278,13 @@ const ReportWaste = () => {
       setSuccess(true);
       handleClear();
     } catch (error) {
-      // Local optimistic fallback
+      console.error("Submission error:", error);
+      // Fallback local report
       const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
       const localNewComplaint = {
         _id: "comp-" + Date.now(),
         id: "comp-" + Date.now(),
-        imageUrl: preview || "https://images.unsplash.com/photo-1530587191325-3db32d826c18?w=500&auto=format&fit=crop&q=80",
+        imageUrl: imagePayload,
         wasteType: prediction,
         description: description || "Civic waste reported via safAI.",
         location: location || { lat: 22.5726, lng: 88.3639, address: "Civic Reported Area" },
@@ -246,11 +297,10 @@ const ReportWaste = () => {
       };
 
       try {
-        const raw = localStorage.getItem("admin_complaints_data");
-        const existing = raw ? JSON.parse(raw) : [];
-        if (Array.isArray(existing)) {
-          const updated = [localNewComplaint, ...existing];
-          localStorage.setItem("admin_complaints_data", JSON.stringify(updated));
+        const rawUser = localStorage.getItem("user_complaints_data");
+        const userList = rawUser ? JSON.parse(rawUser) : [];
+        if (Array.isArray(userList)) {
+          localStorage.setItem("user_complaints_data", JSON.stringify([localNewComplaint, ...userList]));
         }
       } catch (e) {}
 

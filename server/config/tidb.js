@@ -14,14 +14,12 @@ const getTiDB = () => {
   }
 };
 
-// Initialize TiDB Tables
-const initTiDB = async () => {
-  const conn = getTiDB();
-  if (!conn) return;
+let tablesReady = false;
 
+// Ensure tables exist before executing queries
+const ensureTables = async (conn) => {
+  if (tablesReady || !conn) return;
   try {
-    console.log("⚡ Checking and initializing TiDB Cloud tables...");
-
     // Create users table
     await conn.execute(`
       CREATE TABLE IF NOT EXISTS users (
@@ -53,9 +51,17 @@ const initTiDB = async () => {
       )
     `);
 
-    console.log("🌿 TiDB Cloud schema initialized successfully (users & complaints tables ready).");
+    tablesReady = true;
+    console.log("🌿 TiDB Cloud schema initialized & verified (users & complaints tables ready).");
   } catch (err) {
-    console.warn("TiDB Initialization Note:", err.message);
+    console.warn("TiDB Table Check Note:", err.message);
+  }
+};
+
+const initTiDB = async () => {
+  const conn = getTiDB();
+  if (conn) {
+    await ensureTables(conn);
   }
 };
 
@@ -64,6 +70,7 @@ const tidbFindUserByEmail = async (email) => {
   const conn = getTiDB();
   if (!conn) return null;
   try {
+    await ensureTables(conn);
     const rows = await conn.execute(`SELECT * FROM users WHERE LOWER(email) = LOWER(?) LIMIT 1`, [email.trim()]);
     return rows && rows.length > 0 ? rows[0] : null;
   } catch (err) {
@@ -76,6 +83,7 @@ const tidbFindUserById = async (id) => {
   const conn = getTiDB();
   if (!conn) return null;
   try {
+    await ensureTables(conn);
     const rows = await conn.execute(`SELECT * FROM users WHERE id = ? LIMIT 1`, [id]);
     return rows && rows.length > 0 ? rows[0] : null;
   } catch (err) {
@@ -88,6 +96,7 @@ const tidbCreateUser = async ({ name, email, password, role = "user", avatar = n
   const conn = getTiDB();
   if (!conn) return null;
   try {
+    await ensureTables(conn);
     const result = await conn.execute(
       `INSERT INTO users (name, email, password, role, avatar) VALUES (?, ?, ?, ?, ?)`,
       [name, email.toLowerCase().trim(), password, role, avatar]
@@ -103,6 +112,7 @@ const tidbUpdateUserPassword = async (email, hashedPassword) => {
   const conn = getTiDB();
   if (!conn) return false;
   try {
+    await ensureTables(conn);
     await conn.execute(
       `UPDATE users SET password = ? WHERE LOWER(email) = LOWER(?)`,
       [hashedPassword, email.toLowerCase().trim()]
@@ -118,6 +128,7 @@ const tidbGetAllUsers = async () => {
   const conn = getTiDB();
   if (!conn) return [];
   try {
+    await ensureTables(conn);
     const rows = await conn.execute(`SELECT id, name, email, role, avatar, created_at FROM users ORDER BY created_at DESC`);
     return rows && Array.isArray(rows) ? rows : [];
   } catch (err) {
@@ -142,6 +153,7 @@ const tidbInsertComplaint = async ({
   const conn = getTiDB();
   if (!conn) return null;
   try {
+    await ensureTables(conn);
     const result = await conn.execute(
       `INSERT INTO complaints 
        (imageUrl, wasteType, description, lat, lng, locationName, status, reported_by_id, reported_by_name, reported_by_email) 
@@ -160,9 +172,11 @@ const tidbInsertComplaint = async ({
       ]
     );
 
+    const insertedId = result?.lastInsertId ? String(result.lastInsertId) : "tidb-" + Date.now();
+
     return {
-      _id: result.lastInsertId ? String(result.lastInsertId) : "tidb-" + Date.now(),
-      id: result.lastInsertId ? String(result.lastInsertId) : "tidb-" + Date.now(),
+      _id: insertedId,
+      id: insertedId,
       imageUrl,
       wasteType,
       description,
@@ -185,6 +199,7 @@ const tidbGetAllComplaints = async () => {
   const conn = getTiDB();
   if (!conn) return [];
   try {
+    await ensureTables(conn);
     const rows = await conn.execute(`SELECT * FROM complaints ORDER BY created_at DESC`);
     if (!rows || !Array.isArray(rows)) return [];
 
@@ -217,9 +232,11 @@ const tidbGetUserComplaints = async (userEmailOrId) => {
   const conn = getTiDB();
   if (!conn) return [];
   try {
+    await ensureTables(conn);
+    const cleanSearch = String(userEmailOrId).toLowerCase().trim();
     const rows = await conn.execute(
-      `SELECT * FROM complaints WHERE reported_by_email = ? OR reported_by_id = ? ORDER BY created_at DESC`,
-      [String(userEmailOrId), String(userEmailOrId)]
+      `SELECT * FROM complaints WHERE LOWER(reported_by_email) = ? OR reported_by_id = ? ORDER BY created_at DESC`,
+      [cleanSearch, String(userEmailOrId)]
     );
     if (!rows || !Array.isArray(rows)) return [];
 
@@ -252,6 +269,7 @@ const tidbUpdateComplaintStatus = async (id, status) => {
   const conn = getTiDB();
   if (!conn) return false;
   try {
+    await ensureTables(conn);
     await conn.execute(`UPDATE complaints SET status = ? WHERE id = ?`, [status, id]);
     return true;
   } catch (err) {
@@ -264,6 +282,7 @@ const tidbDeleteComplaint = async (id) => {
   const conn = getTiDB();
   if (!conn) return false;
   try {
+    await ensureTables(conn);
     await conn.execute(`DELETE FROM complaints WHERE id = ?`, [id]);
     return true;
   } catch (err) {
