@@ -42,7 +42,8 @@ import {
   fetchAllComplaintsService, 
   updateComplaintStatusService,
   getDatabaseUrl,
-  setCustomDatabaseUrl
+  setCustomDatabaseUrl,
+  testDirectTiDBConnection
 } from "../services/tidbService";
 
 const AdminDashboard = () => {
@@ -120,23 +121,35 @@ const AdminDashboard = () => {
     setDbTesting(true);
     setDbTestResult(null);
 
-    // Save custom URL if entered
-    if (dbUrlInput) {
-      setCustomDatabaseUrl(dbUrlInput);
+    const inputToTest = dbUrlInput ? dbUrlInput.trim() : getDatabaseUrl();
+
+    // 1. If connection URL exists, test direct TiDB connection first
+    if (inputToTest) {
+      setCustomDatabaseUrl(inputToTest);
+      const directResult = await testDirectTiDBConnection(inputToTest);
+      if (directResult.connected) {
+        setDbTestResult(directResult);
+        setDbTesting(false);
+        await fetchData();
+        return;
+      }
     }
 
+    // 2. Try testing backend API test-db
     try {
       const res = await axios.get(`${API}/api/test-db`, { timeout: 7000 });
-      setDbTestResult(res.data);
+      if (res.data && res.data.connected) {
+        setDbTestResult(res.data);
+      } else {
+        const directResult = await testDirectTiDBConnection(inputToTest);
+        setDbTestResult(directResult);
+      }
     } catch (err) {
-      setDbTestResult({
-        connected: false,
-        message: err.response?.data?.message || err.message || "Could not reach database check endpoint.",
-        hint: "Make sure DATABASE_URL is added in Vercel / .env."
-      });
+      const directResult = await testDirectTiDBConnection(inputToTest);
+      setDbTestResult(directResult);
     } finally {
       setDbTesting(false);
-      fetchData();
+      await fetchData();
     }
   };
 
