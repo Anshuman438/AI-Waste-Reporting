@@ -14,7 +14,7 @@ export const getDatabaseUrl = () => {
 };
 
 export const setCustomDatabaseUrl = (url) => {
-  if (url) {
+  if (url && typeof url === "string") {
     localStorage.setItem("safai_db_url", url.trim());
     cachedClient = null;
     tablesInitialized = false;
@@ -78,58 +78,6 @@ export const ensureTiDBTables = async (conn) => {
   }
 };
 
-// Direct browser connection tester
-export const testDirectTiDBConnection = async (customUrl) => {
-  const urlToUse = customUrl || getDatabaseUrl();
-  if (!urlToUse) {
-    return {
-      connected: false,
-      message: "No TiDB connection URL provided or configured.",
-      hint: "Paste your TiDB connection string (starting with mysql://...) to connect directly."
-    };
-  }
-
-  try {
-    const testConn = connect({ url: urlToUse.trim() });
-    await ensureTiDBTables(testConn);
-    const tables = await testConn.execute(`SHOW TABLES`);
-    
-    let usersCount = 0;
-    let complaintsCount = 0;
-
-    try {
-      const uRes = await testConn.execute(`SELECT COUNT(*) as count FROM users`);
-      usersCount = uRes[0]?.count || 0;
-    } catch (e) {}
-
-    try {
-      const cRes = await testConn.execute(`SELECT COUNT(*) as count FROM complaints`);
-      complaintsCount = cRes[0]?.count || 0;
-    } catch (e) {}
-
-    // Save as active connection
-    cachedClient = testConn;
-    tablesInitialized = true;
-    localStorage.setItem("safai_db_url", urlToUse.trim());
-
-    return {
-      connected: true,
-      message: "TiDB Cloud Serverless database is active and connected!",
-      stats: {
-        users: usersCount,
-        complaints: complaintsCount,
-      },
-      tables: tables || []
-    };
-  } catch (err) {
-    return {
-      connected: false,
-      message: "TiDB Direct Connection Error: " + err.message,
-      hint: "Ensure your connection string format is mysql://[user]:[password]@[host]:4000/test?ssl={\"rejectUnauthorized\":true}"
-    };
-  }
-};
-
 // Local storage helper
 const getLocalStore = () => {
   try {
@@ -148,6 +96,21 @@ const saveLocalStore = (list) => {
   } catch (e) {}
 };
 
+const getRequestHeaders = (authToken, extra = {}) => {
+  const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+  const token = authToken || localStorage.getItem("token");
+  const dbUrl = getDatabaseUrl();
+
+  return {
+    ...extra,
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(currentUser.email ? { "x-user-email": currentUser.email } : {}),
+    ...(currentUser._id || currentUser.id ? { "x-user-id": String(currentUser._id || currentUser.id) } : {}),
+    ...(currentUser.role ? { "x-user-role": currentUser.role } : {}),
+    ...(dbUrl ? { "x-db-url": dbUrl } : {}),
+  };
+};
+
 // ==========================================
 // SUBMIT WASTE COMPLAINT (Multi-Tier Sync)
 // ==========================================
@@ -160,68 +123,66 @@ export const submitComplaintService = async (complaintData, authToken) => {
 
   let savedRecord = null;
 
-  // 1. Direct TiDB Cloud Serverless Ingestion (Primary)
-  const conn = getTiDBClient();
-  if (conn) {
-    try {
-      await ensureTiDBTables(conn);
-      const insertRes = await conn.execute(
-        `INSERT INTO complaints 
-         (imageUrl, wasteType, description, lat, lng, locationName, status, reported_by_id, reported_by_name, reported_by_email) 
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          complaintData.imageUrl || complaintData.image || "",
-          complaintData.wasteType || "mixed",
-          complaintData.description || "Civic waste reported via safAI.",
-          loc.lat || 22.5726,
-          loc.lng || 88.3639,
-          loc.address || "Reported Location",
-          "pending",
-          userId,
-          userName,
-          userEmail,
-        ]
-      );
-
-      const complaintId = insertRes.lastInsertId ? String(insertRes.lastInsertId) : "tidb-" + Date.now();
-      savedRecord = {
-        _id: complaintId,
-        id: complaintId,
-        imageUrl: complaintData.imageUrl || complaintData.image,
-        wasteType: complaintData.wasteType,
-        description: complaintData.description,
-        location: loc,
-        status: "pending",
-        reportedBy: {
-          _id: userId,
-          name: userName,
-          email: userEmail,
-        },
-        createdAt: new Date().toISOString(),
-      };
-    } catch (tidbErr) {
-      console.warn("Direct TiDB Insert note:", tidbErr.message);
+  // 1. Try backend API (Primary across devices)
+  try {
+    const res = await axios.post(
+      `${API}/api/complaints`, 
+      complaintData, 
+      {
+        headers: getRequestHeaders(authToken, { "Content-Type": "application/json" }),
+        timeout: 10000,
+      }
+    );
+    if (res.data && (res.data._id || res.data.id)) {
+      savedRecord = res.data;
     }
+  } catch (apiErr) {
+    console.log("Syncing complaint with local storage & TiDB");
   }
 
-  // 2. Try backend API
+  // 2. Direct TiDB Cloud Serverless Ingestion
   if (!savedRecord) {
-    try {
-      const res = await axios.post(`${API}/api/complaints`, complaintData, {
-        headers: {
-          Authorization: authToken ? `Bearer ${authToken}` : "",
-          "Content-Type": "application/json",
-          "x-user-email": userEmail,
-          "x-user-id": userId,
-          "x-user-role": currentUser.role || "user",
-        },
-        timeout: 8000,
-      });
-      if (res.data && (res.data._id || res.data.id)) {
-        savedRecord = res.data;
+    const conn = getTiDBClient();
+    if (conn) {
+      try {
+        await ensureTiDBTables(conn);
+        const insertRes = await conn.execute(
+          `INSERT INTO complaints 
+           (imageUrl, wasteType, description, lat, lng, locationName, status, reported_by_id, reported_by_name, reported_by_email) 
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            complaintData.imageUrl || complaintData.image || "",
+            complaintData.wasteType || "mixed",
+            complaintData.description || "Civic waste reported via safAI.",
+            loc.lat || 22.5726,
+            loc.lng || 88.3639,
+            loc.address || "Reported Location",
+            "pending",
+            userId,
+            userName,
+            userEmail,
+          ]
+        );
+
+        const complaintId = insertRes.lastInsertId ? String(insertRes.lastInsertId) : "tidb-" + Date.now();
+        savedRecord = {
+          _id: complaintId,
+          id: complaintId,
+          imageUrl: complaintData.imageUrl || complaintData.image,
+          wasteType: complaintData.wasteType,
+          description: complaintData.description,
+          location: loc,
+          status: "pending",
+          reportedBy: {
+            _id: userId,
+            name: userName,
+            email: userEmail,
+          },
+          createdAt: new Date().toISOString(),
+        };
+      } catch (tidbErr) {
+        console.warn("Direct TiDB Insert note:", tidbErr.message);
       }
-    } catch (apiErr) {
-      console.log("Syncing complaint with local cache");
     }
   }
 
@@ -260,58 +221,53 @@ export const submitComplaintService = async (complaintData, authToken) => {
 // FETCH ALL COMPLAINTS (For Admin Portal)
 // ==========================================
 export const fetchAllComplaintsService = async (authToken) => {
-  const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
   const localList = getLocalStore();
   let serverList = [];
 
-  // 1. Direct TiDB Cloud query
-  const conn = getTiDBClient();
-  if (conn) {
-    try {
-      await ensureTiDBTables(conn);
-      const rows = await conn.execute(`SELECT * FROM complaints ORDER BY created_at DESC`);
-      if (rows && Array.isArray(rows)) {
-        serverList = rows.map((r) => ({
-          _id: String(r.id),
-          id: String(r.id),
-          imageUrl: r.imageUrl,
-          wasteType: r.wasteType,
-          description: r.description,
-          location: {
-            lat: r.lat || 22.5726,
-            lng: r.lng || 88.3639,
-            address: r.locationName || "Reported Location",
-          },
-          status: r.status || "pending",
-          reportedBy: {
-            _id: r.reported_by_id,
-            name: r.reported_by_name || "Citizen Reporter",
-            email: r.reported_by_email || "citizen@safai.org",
-          },
-          createdAt: r.created_at || new Date().toISOString(),
-        }));
-      }
-    } catch (tidbErr) {
-      console.warn("Direct TiDB Fetch note:", tidbErr.message);
+  // 1. Try backend API (Primary across devices)
+  try {
+    const res = await axios.get(`${API}/api/complaints`, {
+      headers: getRequestHeaders(authToken, { "x-user-role": "admin" }),
+      timeout: 10000,
+    });
+    if (res.data && Array.isArray(res.data)) {
+      serverList = res.data;
     }
+  } catch (apiErr) {
+    console.log("Fetching complaints from TiDB / Store");
   }
 
-  // 2. Try backend API if TiDB direct was empty
+  // 2. Direct TiDB Cloud query
   if (serverList.length === 0) {
-    try {
-      const res = await axios.get(`${API}/api/complaints`, {
-        headers: { 
-          Authorization: authToken ? `Bearer ${authToken}` : "",
-          "x-user-email": currentUser.email || "admin@safai.org",
-          "x-user-role": "admin"
-        },
-        timeout: 8000,
-      });
-      if (res.data && Array.isArray(res.data)) {
-        serverList = res.data;
+    const conn = getTiDBClient();
+    if (conn) {
+      try {
+        await ensureTiDBTables(conn);
+        const rows = await conn.execute(`SELECT * FROM complaints ORDER BY created_at DESC`);
+        if (rows && Array.isArray(rows)) {
+          serverList = rows.map((r) => ({
+            _id: String(r.id),
+            id: String(r.id),
+            imageUrl: r.imageUrl,
+            wasteType: r.wasteType,
+            description: r.description,
+            location: {
+              lat: r.lat || 22.5726,
+              lng: r.lng || 88.3639,
+              address: r.locationName || "Reported Location",
+            },
+            status: r.status || "pending",
+            reportedBy: {
+              _id: r.reported_by_id,
+              name: r.reported_by_name || "Citizen Reporter",
+              email: r.reported_by_email || "citizen@safai.org",
+            },
+            createdAt: r.created_at || new Date().toISOString(),
+          }));
+        }
+      } catch (tidbErr) {
+        console.warn("Direct TiDB Fetch note:", tidbErr.message);
       }
-    } catch (apiErr) {
-      console.log("Fetching complaints from TiDB / Store");
     }
   }
 
@@ -346,57 +302,53 @@ export const fetchUserComplaintsService = async (authToken, userEmail) => {
 
   let userServerList = [];
 
-  // 1. Direct TiDB Cloud query
-  const conn = getTiDBClient();
-  if (conn && cleanEmail) {
-    try {
-      await ensureTiDBTables(conn);
-      const rows = await conn.execute(
-        `SELECT * FROM complaints WHERE LOWER(reported_by_email) = ? OR reported_by_id = ? ORDER BY created_at DESC`,
-        [cleanEmail, userId]
-      );
-      if (rows && Array.isArray(rows)) {
-        userServerList = rows.map((r) => ({
-          _id: String(r.id),
-          id: String(r.id),
-          imageUrl: r.imageUrl,
-          wasteType: r.wasteType,
-          description: r.description,
-          location: {
-            lat: r.lat || 22.5726,
-            lng: r.lng || 88.3639,
-            address: r.locationName || "Reported Location",
-          },
-          status: r.status || "pending",
-          reportedBy: {
-            _id: r.reported_by_id,
-            name: r.reported_by_name || currentUser.name,
-            email: r.reported_by_email || cleanEmail,
-          },
-          createdAt: r.created_at || new Date().toISOString(),
-        }));
-      }
-    } catch (tidbErr) {
-      console.warn("Direct TiDB User Fetch note:", tidbErr.message);
+  // 1. Try backend API
+  try {
+    const res = await axios.get(`${API}/api/complaints/my`, {
+      headers: getRequestHeaders(authToken, { "x-user-email": cleanEmail, "x-user-id": userId }),
+      timeout: 10000,
+    });
+    if (res.data && Array.isArray(res.data)) {
+      userServerList = res.data;
     }
+  } catch (apiErr) {
+    console.log("Fetching citizen complaints from TiDB / Store");
   }
 
-  // 2. Try backend API
-  if (userServerList.length === 0) {
-    try {
-      const res = await axios.get(`${API}/api/complaints/my`, {
-        headers: { 
-          Authorization: authToken ? `Bearer ${authToken}` : "",
-          "x-user-email": cleanEmail,
-          "x-user-id": userId
-        },
-        timeout: 8000,
-      });
-      if (res.data && Array.isArray(res.data)) {
-        userServerList = res.data;
+  // 2. Direct TiDB Cloud query
+  if (userServerList.length === 0 && cleanEmail) {
+    const conn = getTiDBClient();
+    if (conn) {
+      try {
+        await ensureTiDBTables(conn);
+        const rows = await conn.execute(
+          `SELECT * FROM complaints WHERE LOWER(reported_by_email) = ? OR reported_by_id = ? ORDER BY created_at DESC`,
+          [cleanEmail, userId]
+        );
+        if (rows && Array.isArray(rows)) {
+          userServerList = rows.map((r) => ({
+            _id: String(r.id),
+            id: String(r.id),
+            imageUrl: r.imageUrl,
+            wasteType: r.wasteType,
+            description: r.description,
+            location: {
+              lat: r.lat || 22.5726,
+              lng: r.lng || 88.3639,
+              address: r.locationName || "Reported Location",
+            },
+            status: r.status || "pending",
+            reportedBy: {
+              _id: r.reported_by_id,
+              name: r.reported_by_name || currentUser.name,
+              email: r.reported_by_email || cleanEmail,
+            },
+            createdAt: r.created_at || new Date().toISOString(),
+          }));
+        }
+      } catch (tidbErr) {
+        console.warn("Direct TiDB User Fetch note:", tidbErr.message);
       }
-    } catch (apiErr) {
-      console.log("Fetching citizen complaints from TiDB / Store");
     }
   }
 
@@ -432,7 +384,18 @@ export const fetchUserComplaintsService = async (authToken, userEmail) => {
 // UPDATE COMPLAINT STATUS
 // ==========================================
 export const updateComplaintStatusService = async (id, status, authToken) => {
-  // 1. Direct TiDB update
+  // 1. Update backend API
+  try {
+    await axios.put(
+      `${API}/api/complaints/${id}/status`,
+      { status },
+      { 
+        headers: getRequestHeaders(authToken, { "x-user-role": "admin" })
+      }
+    );
+  } catch (apiErr) {}
+
+  // 2. Direct TiDB update
   const conn = getTiDBClient();
   if (conn) {
     try {
@@ -440,20 +403,6 @@ export const updateComplaintStatusService = async (id, status, authToken) => {
       await conn.execute(`UPDATE complaints SET status = ? WHERE id = ?`, [status, id]);
     } catch (e) {}
   }
-
-  // 2. Update backend API
-  try {
-    await axios.put(
-      `${API}/api/complaints/${id}/status`,
-      { status },
-      { 
-        headers: { 
-          Authorization: authToken ? `Bearer ${authToken}` : "",
-          "x-user-role": "admin"
-        } 
-      }
-    );
-  } catch (apiErr) {}
 
   // 3. Update local store
   const localList = getLocalStore();
@@ -470,7 +419,14 @@ export const updateComplaintStatusService = async (id, status, authToken) => {
 // DELETE COMPLAINT
 // ==========================================
 export const deleteComplaintService = async (id, authToken) => {
-  // 1. Direct TiDB delete
+  // 1. Delete via backend API
+  try {
+    await axios.delete(`${API}/api/complaints/${id}`, {
+      headers: getRequestHeaders(authToken),
+    });
+  } catch (apiErr) {}
+
+  // 2. Direct TiDB delete
   const conn = getTiDBClient();
   if (conn) {
     try {
@@ -478,13 +434,6 @@ export const deleteComplaintService = async (id, authToken) => {
       await conn.execute(`DELETE FROM complaints WHERE id = ?`, [id]);
     } catch (e) {}
   }
-
-  // 2. Delete via backend API
-  try {
-    await axios.delete(`${API}/api/complaints/${id}`, {
-      headers: { Authorization: authToken ? `Bearer ${authToken}` : "" },
-    });
-  } catch (apiErr) {}
 
   // 3. Update local store
   const localList = getLocalStore();
@@ -499,7 +448,26 @@ export const deleteComplaintService = async (id, authToken) => {
 // CHANGE ADMIN PASSWORD
 // ==========================================
 export const changeAdminPasswordService = async (currentPassword, newPassword, authToken) => {
-  // 1. Direct TiDB Cloud Password Update
+  // 1. Try API
+  let apiSuccess = false;
+  try {
+    const res = await axios.post(
+      `${API}/api/auth/change-password`,
+      { currentPassword, newPassword },
+      { 
+        headers: getRequestHeaders(authToken, { "x-user-email": "admin@safai.org", "x-user-role": "admin" })
+      }
+    );
+    if (res.data?.message) {
+      apiSuccess = true;
+    }
+  } catch (apiErr) {
+    if (apiErr.response?.data?.message) {
+      return { success: false, message: apiErr.response.data.message };
+    }
+  }
+
+  // 2. Direct TiDB Cloud Password Update
   const conn = getTiDBClient();
   if (conn) {
     try {
@@ -509,7 +477,7 @@ export const changeAdminPasswordService = async (currentPassword, newPassword, a
         const adminUser = rows[0];
         if (adminUser.password) {
           const isMatch = await bcrypt.compare(currentPassword, adminUser.password);
-          if (!isMatch) {
+          if (!isMatch && !apiSuccess) {
             return { success: false, message: "Incorrect current password." };
           }
         }
@@ -524,21 +492,6 @@ export const changeAdminPasswordService = async (currentPassword, newPassword, a
       console.warn("Direct TiDB password note:", tidbErr.message);
     }
   }
-
-  // 2. Try API
-  try {
-    const res = await axios.post(
-      `${API}/api/auth/change-password`,
-      { currentPassword, newPassword },
-      { 
-        headers: { 
-          Authorization: authToken ? `Bearer ${authToken}` : "",
-          "x-user-email": "admin@safai.org",
-          "x-user-role": "admin"
-        } 
-      }
-    );
-  } catch (apiErr) {}
 
   // 3. Store in local admin password hash cache
   try {

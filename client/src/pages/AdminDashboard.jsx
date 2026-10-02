@@ -42,8 +42,7 @@ import {
   fetchAllComplaintsService, 
   updateComplaintStatusService,
   getDatabaseUrl,
-  setCustomDatabaseUrl,
-  testDirectTiDBConnection
+  setCustomDatabaseUrl
 } from "../services/tidbService";
 
 const AdminDashboard = () => {
@@ -122,31 +121,42 @@ const AdminDashboard = () => {
     setDbTestResult(null);
 
     const inputToTest = dbUrlInput ? dbUrlInput.trim() : getDatabaseUrl();
-
-    // 1. If connection URL exists, test direct TiDB connection first
     if (inputToTest) {
       setCustomDatabaseUrl(inputToTest);
-      const directResult = await testDirectTiDBConnection(inputToTest);
-      if (directResult.connected) {
-        setDbTestResult(directResult);
-        setDbTesting(false);
-        await fetchData();
-        return;
-      }
     }
 
-    // 2. Try testing backend API test-db
     try {
-      const res = await axios.get(`${API}/api/test-db`, { timeout: 7000 });
-      if (res.data && res.data.connected) {
+      // 1. Test via Serverless Backend API (Node.js runtime has full TCP/HTTPS network access with zero browser CORS blocks)
+      const res = await axios.post(
+        `${API}/api/test-db`,
+        { url: inputToTest },
+        { 
+          headers: { 
+            "x-db-url": inputToTest,
+            "Content-Type": "application/json" 
+          }, 
+          timeout: 12000 
+        }
+      );
+
+      if (res.data) {
         setDbTestResult(res.data);
-      } else {
-        const directResult = await testDirectTiDBConnection(inputToTest);
-        setDbTestResult(directResult);
+      }
+      if (res.data?.connected) {
+        await fetchData();
       }
     } catch (err) {
-      const directResult = await testDirectTiDBConnection(inputToTest);
-      setDbTestResult(directResult);
+      // 2. Fallback to direct GET /api/test-db
+      try {
+        const getRes = await axios.get(`${API}/api/test-db?url=${encodeURIComponent(inputToTest)}`, { timeout: 8000 });
+        setDbTestResult(getRes.data);
+      } catch (getErr) {
+        setDbTestResult({
+          connected: false,
+          message: err.response?.data?.message || err.message || "Failed to reach backend diagnostic API.",
+          hint: "Ensure DATABASE_URL is added to Vercel Environment Variables and the project is Redeployed."
+        });
+      }
     } finally {
       setDbTesting(false);
       await fetchData();

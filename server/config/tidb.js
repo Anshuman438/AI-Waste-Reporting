@@ -1,8 +1,21 @@
 const { connect } = require("@tidbcloud/serverless");
 
+let dynamicDbUrl = null;
+
+const setDynamicDbUrl = (url) => {
+  if (url && typeof url === "string" && url.trim().startsWith("mysql://")) {
+    dynamicDbUrl = url.trim();
+  }
+};
+
 // Connect to TiDB Cloud using @tidbcloud/serverless
-const getTiDB = () => {
-  const databaseUrl = process.env.DATABASE_URL || process.env.TIDB_DATABASE_URL;
+const getTiDB = (overrideUrl) => {
+  const databaseUrl = 
+    overrideUrl || 
+    dynamicDbUrl || 
+    process.env.DATABASE_URL || 
+    process.env.TIDB_DATABASE_URL;
+
   if (!databaseUrl) {
     return null;
   }
@@ -291,21 +304,21 @@ const tidbDeleteComplaint = async (id) => {
   }
 };
 
-const checkTiDBStatus = async () => {
-  const dbUrl = process.env.DATABASE_URL || process.env.TIDB_DATABASE_URL;
+const checkTiDBStatus = async (overrideUrl) => {
+  const dbUrl = overrideUrl || dynamicDbUrl || process.env.DATABASE_URL || process.env.TIDB_DATABASE_URL;
   if (!dbUrl) {
     return {
       connected: false,
       message: "DATABASE_URL is not set in environment variables.",
-      hint: "Add DATABASE_URL in Vercel Settings -> Environment Variables"
+      hint: "Add DATABASE_URL in Vercel Settings -> Environment Variables or enter connection string in modal."
     };
   }
 
-  const conn = getTiDB();
+  const conn = getTiDB(dbUrl);
   if (!conn) {
     return {
       connected: false,
-      message: "Failed to create TiDB connection instance from DATABASE_URL."
+      message: "Failed to create TiDB connection instance from database URL."
     };
   }
 
@@ -330,6 +343,10 @@ const checkTiDBStatus = async () => {
       complaintCount = cRows[0]?.count || 0;
     } catch (e) {}
 
+    if (overrideUrl) {
+      setDynamicDbUrl(overrideUrl);
+    }
+
     return {
       connected: true,
       message: "TiDB Cloud Serverless database is active and connected!",
@@ -343,13 +360,14 @@ const checkTiDBStatus = async () => {
     return {
       connected: false,
       message: "TiDB Connection Error: " + err.message,
-      hint: "Verify that your TiDB cluster is running and your connection string password is correct."
+      hint: "Verify that your TiDB cluster is running and your connection string credentials are correct."
     };
   }
 };
 
 module.exports = {
   getTiDB,
+  setDynamicDbUrl,
   initTiDB,
   checkTiDBStatus,
   tidbFindUserByEmail,
