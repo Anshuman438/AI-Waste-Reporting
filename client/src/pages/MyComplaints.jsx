@@ -45,7 +45,7 @@ const MyComplaints = () => {
       if (userId) headers["x-user-id"] = userId;
 
       // Fetch user-specific complaints from DB
-      let list = [];
+      let serverList = [];
       try {
         const r = await fetch(
           `/api/complaints?mode=my&email=${encodeURIComponent(userEmail)}&user_id=${encodeURIComponent(userId)}`,
@@ -53,18 +53,18 @@ const MyComplaints = () => {
         );
         if (r.ok) {
           const data = await r.json();
-          if (Array.isArray(data) && data.length > 0) list = data;
+          if (Array.isArray(data) && data.length > 0) serverList = data;
         }
       } catch (_) {}
 
       // Fallback: fetch all from test-db and filter client-side
-      if (list.length === 0) {
+      if (serverList.length === 0) {
         try {
           const r = await fetch("/api/test-db", { headers });
           if (r.ok) {
             const data = await r.json();
             if (Array.isArray(data.complaints)) {
-              list = data.complaints.filter((c) => {
+              serverList = data.complaints.filter((c) => {
                 const repEmail = (c.reportedBy?.email || "").toLowerCase().trim();
                 const repId = String(c.reportedBy?._id || c.reportedBy?.id || "");
                 return (
@@ -77,39 +77,37 @@ const MyComplaints = () => {
         } catch (_) {}
       }
 
-      // Merge with localStorage (server data takes priority for status)
-      if (list.length > 0) {
-        // Server is authoritative for status - always use server list as base
-        const merged = new Map();
-        for (const item of list) {
-          merged.set(String(item._id || item.id), item);
-        }
-        // Add any local-only items (offline submissions)
-        try {
-          const local = JSON.parse(localStorage.getItem("safai_all_complaints") || "[]");
-          const userLocal = local.filter((c) => {
-            const repEmail = (c.reportedBy?.email || "").toLowerCase().trim();
-            const repId = String(c.reportedBy?._id || c.reportedBy?.id || "");
-            return (userEmail && repEmail === userEmail) || (userId && repId === userId);
-          });
-          for (const item of userLocal) {
-            const key = String(item._id || item.id);
-            if (!merged.has(key)) merged.set(key, item); // only add if not from server
-          }
-        } catch (_) {}
+      if (serverList.length > 0) {
+        // Server is THE truth — use directly, never merge localStorage
+        // (merging causes duplicates when local IDs differ from server IDs)
+        setComplaints(serverList);
 
-        const result = Array.from(merged.values()).sort(
-          (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
-        );
-        setComplaints(result);
+        // Clean up stale localStorage: keep only offline-only items (start with "comp-")
+        // that the server doesn't have yet
+        try {
+          const serverIds = new Set(serverList.map((c) => String(c._id || c.id)));
+          const local = JSON.parse(localStorage.getItem("safai_all_complaints") || "[]");
+          // Keep only items that are both offline (comp- prefix) AND not yet on server
+          const offlineOnly = local.filter((c) => {
+            const localId = String(c._id || c.id);
+            return localId.startsWith("comp-") && !serverIds.has(localId);
+          });
+          localStorage.setItem("safai_all_complaints", JSON.stringify([
+            ...serverList,
+            ...offlineOnly
+          ]));
+        } catch (_) {}
       } else {
-        // Fallback to localStorage only
+        // Offline fallback — show localStorage items for this user only
         try {
           const local = JSON.parse(localStorage.getItem("safai_all_complaints") || "[]");
           const userLocal = local.filter((c) => {
             const repEmail = (c.reportedBy?.email || "").toLowerCase().trim();
             const repId = String(c.reportedBy?._id || c.reportedBy?.id || "");
-            return (userEmail && repEmail === userEmail) || (userId && repId === userId);
+            return (
+              (userEmail && repEmail === userEmail) ||
+              (userId && repId === userId)
+            );
           });
           if (userLocal.length > 0) setComplaints(userLocal);
         } catch (_) {}

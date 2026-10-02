@@ -158,26 +158,23 @@ export const fetchAllComplaintsService = async (authToken) => {
     }
   }
 
-  // 3. Merge server list with local list (deduplicate by id)
-  const mergedMap = new Map();
-  for (const item of serverList) {
-    mergedMap.set(String(item._id || item.id), item);
-  }
-  for (const item of localList) {
-    const key = String(item._id || item.id);
-    if (!mergedMap.has(key)) {
-      mergedMap.set(key, item);
-    }
+  // 3. Use server list directly — server is THE source of truth
+  // Never merge localStorage: local comp-TIMESTAMP IDs ≠ server auto-increment IDs → duplicates
+  if (serverList.length > 0) {
+    // Clean up localStorage: replace with server data + any unsent offline items
+    try {
+      const serverIds = new Set(serverList.map((c) => String(c._id || c.id)));
+      const local = localList.filter((c) => {
+        const localId = String(c._id || c.id);
+        return localId.startsWith("comp-") && !serverIds.has(localId);
+      });
+      saveLocalStore([...serverList, ...local]);
+    } catch (_) {}
+    return serverList;
   }
 
-  const result = Array.from(mergedMap.values()).sort(
-    (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
-  );
-
-  if (result.length > 0) {
-    saveLocalStore(result);
-  }
-  return result;
+  // Offline fallback: return local list only
+  return localList;
 };
 
 // ==========================================
