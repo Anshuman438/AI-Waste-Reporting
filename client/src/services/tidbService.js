@@ -102,12 +102,12 @@ const getRequestHeaders = (authToken, extra = {}) => {
   const dbUrl = getDatabaseUrl();
 
   return {
-    ...extra,
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...(currentUser.email ? { "x-user-email": currentUser.email } : {}),
     ...(currentUser._id || currentUser.id ? { "x-user-id": String(currentUser._id || currentUser.id) } : {}),
     ...(currentUser.role ? { "x-user-role": currentUser.role } : {}),
     ...(dbUrl ? { "x-db-url": dbUrl } : {}),
+    ...extra,
   };
 };
 
