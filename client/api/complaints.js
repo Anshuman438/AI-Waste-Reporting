@@ -1,4 +1,7 @@
-const { connect } = require("@tidbcloud/serverless");
+import { connect } from "@tidbcloud/serverless";
+
+const DEFAULT_TIDB_URL =
+  'mysql://3J8trmw64KZr7yY.root:SB3ubp1rPKMNSU3T@gateway01.ap-southeast-1.prod.aws.tidbcloud.com:4000/test?ssl={"rejectUnauthorized":true}';
 
 const getDbUrl = (req) => {
   return (
@@ -7,7 +10,7 @@ const getDbUrl = (req) => {
     req?.query?.url ||
     process.env.DATABASE_URL ||
     process.env.TIDB_DATABASE_URL ||
-    'mysql://3J8trmw64KZr7yY.root:SB3ubp1rPKMNSU3T@gateway01.ap-southeast-1.prod.aws.tidbcloud.com:4000/test?ssl={"rejectUnauthorized":true}'
+    DEFAULT_TIDB_URL
   );
 };
 
@@ -32,7 +35,7 @@ const ensureTables = async (conn) => {
   } catch (e) {}
 };
 
-module.exports = async (req, res) => {
+export default async function handler(req, res) {
   // Set CORS headers
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH");
@@ -151,7 +154,6 @@ module.exports = async (req, res) => {
       }
     }
 
-    // Fallback response
     const fallbackId = "comp-" + Date.now();
     return res.status(201).json({
       _id: fallbackId,
@@ -198,4 +200,4 @@ module.exports = async (req, res) => {
   }
 
   return res.status(200).json({ message: "safAI Complaints API" });
-};
+}

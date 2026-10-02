@@ -1,4 +1,7 @@
-const { connect } = require("@tidbcloud/serverless");
+import { connect } from "@tidbcloud/serverless";
+
+const DEFAULT_TIDB_URL =
+  'mysql://3J8trmw64KZr7yY.root:SB3ubp1rPKMNSU3T@gateway01.ap-southeast-1.prod.aws.tidbcloud.com:4000/test?ssl={"rejectUnauthorized":true}';
 
 const getDbUrl = (req) => {
   return (
@@ -8,11 +11,11 @@ const getDbUrl = (req) => {
     req?.body?.url ||
     process.env.DATABASE_URL ||
     process.env.TIDB_DATABASE_URL ||
-    'mysql://3J8trmw64KZr7yY.root:SB3ubp1rPKMNSU3T@gateway01.ap-southeast-1.prod.aws.tidbcloud.com:4000/test?ssl={"rejectUnauthorized":true}'
+    DEFAULT_TIDB_URL
   );
 };
 
-module.exports = async (req, res) => {
+export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, x-db-url, x-user-email, x-user-id, x-user-role");
@@ -92,4 +95,4 @@ module.exports = async (req, res) => {
       message: "TiDB Serverless Connection Note: " + err.message
     });
   }
-};
+}

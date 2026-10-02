@@ -1,6 +1,7 @@
 {
   "name": "safai-waste-management",
   "version": "1.0.0",
+  "type": "module",
   "private": true,
   "scripts": {
     "build": "npm install && npm --prefix client install && npm --prefix client run build",
