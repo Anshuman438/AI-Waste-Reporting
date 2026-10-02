@@ -4,6 +4,7 @@ const getDbUrl = (req) => {
   return (
     req?.headers?.["x-db-url"] ||
     req?.query?.url ||
+    req?.query?.db_url ||
     req?.body?.url ||
     process.env.DATABASE_URL ||
     process.env.TIDB_DATABASE_URL ||
@@ -14,7 +15,7 @@ const getDbUrl = (req) => {
 module.exports = async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, x-db-url");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, x-db-url, x-user-email, x-user-id, x-user-role");
 
   if (req.method === "OPTIONS") {
     return res.status(200).end();
@@ -42,6 +43,33 @@ module.exports = async (req, res) => {
 
     const tables = await conn.execute(`SHOW TABLES`);
     const cRows = await conn.execute(`SELECT COUNT(*) as count FROM complaints`);
+    
+    let allComplaints = [];
+    try {
+      const rows = await conn.execute(`SELECT * FROM complaints ORDER BY created_at DESC`);
+      allComplaints = (rows || []).map((r) => ({
+        _id: String(r.id),
+        id: String(r.id),
+        imageUrl: r.imageUrl,
+        wasteType: r.wasteType,
+        description: r.description,
+        location: {
+          lat: r.lat || 22.5726,
+          lng: r.lng || 88.3639,
+          address: r.locationName || "Reported Location",
+        },
+        status: r.status || "pending",
+        reportedBy: {
+          _id: r.reported_by_id,
+          name: r.reported_by_name || "Citizen Reporter",
+          email: r.reported_by_email || "citizen@safai.org",
+        },
+        createdAt: r.created_at || new Date().toISOString(),
+      }));
+    } catch (e) {
+      console.warn("Test DB fetch complaints note:", e.message);
+    }
+
     let userCount = 0;
     try {
       const uRows = await conn.execute(`SELECT COUNT(*) as count FROM users`);
@@ -55,7 +83,8 @@ module.exports = async (req, res) => {
       stats: {
         users: userCount,
         complaints: cRows[0]?.count || 0
-      }
+      },
+      complaints: allComplaints
     });
   } catch (err) {
     return res.status(200).json({

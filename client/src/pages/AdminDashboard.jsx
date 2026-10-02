@@ -141,15 +141,21 @@ const AdminDashboard = () => {
 
       if (res.data) {
         setDbTestResult(res.data);
+        if (Array.isArray(res.data.complaints) && res.data.complaints.length > 0) {
+          setComplaints(res.data.complaints);
+        }
       }
       if (res.data?.connected) {
-        await fetchData();
+        await fetchData(true);
       }
     } catch (err) {
       // 2. Fallback to direct GET /api/test-db
       try {
         const getRes = await axios.get(`${API}/api/test-db?url=${encodeURIComponent(inputToTest)}`, { timeout: 8000 });
         setDbTestResult(getRes.data);
+        if (Array.isArray(getRes.data?.complaints) && getRes.data.complaints.length > 0) {
+          setComplaints(getRes.data.complaints);
+        }
       } catch (getErr) {
         setDbTestResult({
           connected: false,
@@ -159,7 +165,7 @@ const AdminDashboard = () => {
       }
     } finally {
       setDbTesting(false);
-      await fetchData();
+      await fetchData(true);
     }
   };
 

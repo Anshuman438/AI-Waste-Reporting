@@ -4,6 +4,7 @@ const getDbUrl = (req) => {
   return (
     req?.headers?.["x-db-url"] ||
     req?.query?.db_url ||
+    req?.query?.url ||
     process.env.DATABASE_URL ||
     process.env.TIDB_DATABASE_URL ||
     'mysql://3J8trmw64KZr7yY.root:SB3ubp1rPKMNSU3T@gateway01.ap-southeast-1.prod.aws.tidbcloud.com:4000/test?ssl={"rejectUnauthorized":true}'
@@ -34,7 +35,7 @@ const ensureTables = async (conn) => {
 module.exports = async (req, res) => {
   // Set CORS headers
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, x-user-email, x-user-id, x-user-role, x-db-url");
 
   if (req.method === "OPTIONS") {
@@ -53,6 +54,7 @@ module.exports = async (req, res) => {
   // GET: Fetch all complaints or user complaints
   if (req.method === "GET") {
     const userEmail = (req.headers["x-user-email"] || req.query.email || "").toLowerCase().trim();
+    const userId = req.headers["x-user-id"] || req.query.user_id || "";
     const isUserOnly = req.url.includes("/my") || req.query.mode === "my";
 
     if (!conn) {
@@ -61,10 +63,10 @@ module.exports = async (req, res) => {
 
     try {
       let rows = [];
-      if (isUserOnly && userEmail) {
+      if (isUserOnly && (userEmail || userId)) {
         rows = await conn.execute(
-          `SELECT * FROM complaints WHERE LOWER(reported_by_email) = ? ORDER BY created_at DESC`,
-          [userEmail]
+          `SELECT * FROM complaints WHERE LOWER(reported_by_email) = ? OR reported_by_id = ? ORDER BY created_at DESC`,
+          [userEmail || "", String(userId || "")]
         );
       } else {
         rows = await conn.execute(`SELECT * FROM complaints ORDER BY created_at DESC`);
@@ -164,23 +166,26 @@ module.exports = async (req, res) => {
     });
   }
 
-  // PUT: Update status
+  // PUT / PATCH: Update status
   if (req.method === "PUT" || req.method === "PATCH") {
     const { id, status } = req.body || {};
-    if (conn && id && status) {
+    const pathId = req.url.split("/")[2] || req.query.id;
+    const targetId = id || pathId;
+
+    if (conn && targetId && status) {
       try {
-        await conn.execute(`UPDATE complaints SET status = ? WHERE id = ?`, [status, id]);
-        return res.status(200).json({ message: "Status updated successfully", id, status });
+        await conn.execute(`UPDATE complaints SET status = ? WHERE id = ?`, [status, targetId]);
+        return res.status(200).json({ message: "Status updated successfully", id: targetId, status });
       } catch (err) {
         console.error("Update status error:", err.message);
       }
     }
-    return res.status(200).json({ message: "Status updated", id, status });
+    return res.status(200).json({ message: "Status updated", id: targetId, status });
   }
 
   // DELETE: Remove complaint
   if (req.method === "DELETE") {
-    const id = req.query.id || (req.body && req.body.id);
+    const id = req.query.id || (req.body && req.body.id) || req.url.split("/")[2];
     if (conn && id) {
       try {
         await conn.execute(`DELETE FROM complaints WHERE id = ?`, [id]);

@@ -8,13 +8,17 @@ const setDynamicDbUrl = (url) => {
   }
 };
 
+const DEFAULT_TIDB_URL =
+  'mysql://3J8trmw64KZr7yY.root:SB3ubp1rPKMNSU3T@gateway01.ap-southeast-1.prod.aws.tidbcloud.com:4000/test?ssl={"rejectUnauthorized":true}';
+
 // Connect to TiDB Cloud using @tidbcloud/serverless
 const getTiDB = (overrideUrl) => {
   const databaseUrl = 
     overrideUrl || 
     dynamicDbUrl || 
     process.env.DATABASE_URL || 
-    process.env.TIDB_DATABASE_URL;
+    process.env.TIDB_DATABASE_URL ||
+    DEFAULT_TIDB_URL;
 
   if (!databaseUrl) {
     return null;

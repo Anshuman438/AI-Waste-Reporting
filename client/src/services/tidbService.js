@@ -3,13 +3,16 @@ import axios from "axios";
 import bcrypt from "bcryptjs";
 import { API } from "../config/api";
 
+export const DEFAULT_TIDB_URL =
+  'mysql://3J8trmw64KZr7yY.root:SB3ubp1rPKMNSU3T@gateway01.ap-southeast-1.prod.aws.tidbcloud.com:4000/test?ssl={"rejectUnauthorized":true}';
+
 export const getDatabaseUrl = () => {
   return (
     localStorage.getItem("safai_db_url") ||
     import.meta.env.VITE_DATABASE_URL ||
     import.meta.env.DATABASE_URL ||
     import.meta.env.TIDB_DATABASE_URL ||
-    ""
+    DEFAULT_TIDB_URL
   );
 };
 
@@ -120,6 +123,7 @@ export const submitComplaintService = async (complaintData, authToken) => {
   const userId = String(currentUser._id || currentUser.id || "usr-" + Date.now());
   const userName = currentUser.name || "Citizen Reporter";
   const loc = complaintData.location || { lat: 22.5726, lng: 88.3639, address: "Civic Area" };
+  const dbUrl = getDatabaseUrl();
 
   let savedRecord = null;
 
@@ -129,6 +133,7 @@ export const submitComplaintService = async (complaintData, authToken) => {
       `${API}/api/complaints`, 
       complaintData, 
       {
+        params: { db_url: dbUrl },
         headers: getRequestHeaders(authToken, { "Content-Type": "application/json" }),
         timeout: 10000,
       }
@@ -223,21 +228,45 @@ export const submitComplaintService = async (complaintData, authToken) => {
 export const fetchAllComplaintsService = async (authToken) => {
   const localList = getLocalStore();
   let serverList = [];
+  const dbUrl = getDatabaseUrl();
 
-  // 1. Try backend API (Primary across devices)
+  // 1. Try primary backend API endpoint
   try {
     const res = await axios.get(`${API}/api/complaints`, {
+      params: { db_url: dbUrl, t: Date.now() },
       headers: getRequestHeaders(authToken, { "x-user-role": "admin" }),
       timeout: 10000,
     });
-    if (res.data && Array.isArray(res.data)) {
-      serverList = res.data;
+    if (res.data) {
+      if (Array.isArray(res.data)) {
+        serverList = res.data;
+      } else if (Array.isArray(res.data.complaints)) {
+        serverList = res.data.complaints;
+      } else if (Array.isArray(res.data.data)) {
+        serverList = res.data.data;
+      }
     }
   } catch (apiErr) {
-    console.log("Fetching complaints from TiDB / Store");
+    console.log("Primary API complaints fetch note:", apiErr.message);
   }
 
-  // 2. Direct TiDB Cloud query
+  // 2. Secondary fallback via test-db endpoint (Which has verified live database connection)
+  if (serverList.length === 0) {
+    try {
+      const res = await axios.get(`${API}/api/test-db`, {
+        params: { url: dbUrl, mode: "all", t: Date.now() },
+        headers: getRequestHeaders(authToken, { "x-user-role": "admin" }),
+        timeout: 10000,
+      });
+      if (res.data?.complaints && Array.isArray(res.data.complaints) && res.data.complaints.length > 0) {
+        serverList = res.data.complaints;
+      }
+    } catch (fallbackErr) {
+      console.log("Fallback test-db complaints fetch note:", fallbackErr.message);
+    }
+  }
+
+  // 3. Direct TiDB Cloud query
   if (serverList.length === 0) {
     const conn = getTiDBClient();
     if (conn) {
@@ -271,7 +300,7 @@ export const fetchAllComplaintsService = async (authToken) => {
     }
   }
 
-  // 3. Merge server/TiDB list with local list
+  // 4. Merge server/TiDB list with local list
   const mergedMap = new Map();
   for (const item of serverList) {
     mergedMap.set(String(item._id || item.id), item);
@@ -299,23 +328,46 @@ export const fetchUserComplaintsService = async (authToken, userEmail) => {
   const cleanEmail = (userEmail || currentUser.email || "").toLowerCase().trim();
   const userId = String(currentUser._id || currentUser.id || "");
   const localList = getLocalStore();
+  const dbUrl = getDatabaseUrl();
 
   let userServerList = [];
 
   // 1. Try backend API
   try {
     const res = await axios.get(`${API}/api/complaints/my`, {
+      params: { email: cleanEmail, user_id: userId, db_url: dbUrl, t: Date.now() },
       headers: getRequestHeaders(authToken, { "x-user-email": cleanEmail, "x-user-id": userId }),
       timeout: 10000,
     });
-    if (res.data && Array.isArray(res.data)) {
-      userServerList = res.data;
+    if (res.data) {
+      if (Array.isArray(res.data)) {
+        userServerList = res.data;
+      } else if (Array.isArray(res.data.complaints)) {
+        userServerList = res.data.complaints;
+      }
     }
   } catch (apiErr) {
     console.log("Fetching citizen complaints from TiDB / Store");
   }
 
-  // 2. Direct TiDB Cloud query
+  // 2. Secondary fallback via test-db endpoint if empty
+  if (userServerList.length === 0 && cleanEmail) {
+    try {
+      const res = await axios.get(`${API}/api/test-db`, {
+        params: { url: dbUrl, t: Date.now() },
+        timeout: 10000,
+      });
+      if (res.data?.complaints && Array.isArray(res.data.complaints)) {
+        userServerList = res.data.complaints.filter((c) => {
+          const repEmail = (c.reportedBy?.email || "").toLowerCase().trim();
+          const repId = String(c.reportedBy?._id || c.reportedBy?.id || "");
+          return (cleanEmail && repEmail === cleanEmail) || (userId && repId === userId);
+        });
+      }
+    } catch (e) {}
+  }
+
+  // 3. Direct TiDB Cloud query
   if (userServerList.length === 0 && cleanEmail) {
     const conn = getTiDBClient();
     if (conn) {
@@ -352,7 +404,7 @@ export const fetchUserComplaintsService = async (authToken, userEmail) => {
     }
   }
 
-  // 3. Filter from local store
+  // 4. Filter from local store
   const localMatching = localList.filter((c) => {
     const repEmail = (c.reportedBy?.email || "").toLowerCase().trim();
     const repId = String(c.reportedBy?._id || c.reportedBy?.id || "");
@@ -363,7 +415,7 @@ export const fetchUserComplaintsService = async (authToken, userEmail) => {
     );
   });
 
-  // 4. Merge server & local matching
+  // 5. Merge server & local matching
   const mergedMap = new Map();
   for (const item of userServerList) {
     mergedMap.set(String(item._id || item.id), item);
@@ -384,12 +436,15 @@ export const fetchUserComplaintsService = async (authToken, userEmail) => {
 // UPDATE COMPLAINT STATUS
 // ==========================================
 export const updateComplaintStatusService = async (id, status, authToken) => {
+  const dbUrl = getDatabaseUrl();
+
   // 1. Update backend API
   try {
     await axios.put(
       `${API}/api/complaints/${id}/status`,
-      { status },
+      { status, id },
       { 
+        params: { db_url: dbUrl },
         headers: getRequestHeaders(authToken, { "x-user-role": "admin" })
       }
     );
@@ -419,9 +474,12 @@ export const updateComplaintStatusService = async (id, status, authToken) => {
 // DELETE COMPLAINT
 // ==========================================
 export const deleteComplaintService = async (id, authToken) => {
+  const dbUrl = getDatabaseUrl();
+
   // 1. Delete via backend API
   try {
     await axios.delete(`${API}/api/complaints/${id}`, {
+      params: { id, db_url: dbUrl },
       headers: getRequestHeaders(authToken),
     });
   } catch (apiErr) {}
@@ -448,6 +506,8 @@ export const deleteComplaintService = async (id, authToken) => {
 // CHANGE ADMIN PASSWORD
 // ==========================================
 export const changeAdminPasswordService = async (currentPassword, newPassword, authToken) => {
+  const dbUrl = getDatabaseUrl();
+
   // 1. Try API
   let apiSuccess = false;
   try {
@@ -455,6 +515,7 @@ export const changeAdminPasswordService = async (currentPassword, newPassword, a
       `${API}/api/auth/change-password`,
       { currentPassword, newPassword },
       { 
+        params: { db_url: dbUrl },
         headers: getRequestHeaders(authToken, { "x-user-email": "admin@safai.org", "x-user-role": "admin" })
       }
     );
