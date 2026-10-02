@@ -131,13 +131,13 @@ export const fetchAllComplaintsService = async (authToken) => {
     const res = await axios.get(`${API}/api/complaints`, {
       params: { db_url: dbUrl, t: Date.now() },
       headers: getRequestHeaders(authToken, { "x-user-role": "admin" }),
-      timeout: 10000,
+      timeout: 6000,
     });
     if (res.data && Array.isArray(res.data) && res.data.length > 0) {
       serverList = res.data;
     }
   } catch (apiErr) {
-    console.warn("Primary API complaints note:", apiErr.message);
+    // silent
   }
 
   // 2. Secondary fallback via test-db endpoint
@@ -146,13 +146,13 @@ export const fetchAllComplaintsService = async (authToken) => {
       const res = await axios.get(`${API}/api/test-db`, {
         params: { url: dbUrl, mode: "all", t: Date.now() },
         headers: getRequestHeaders(authToken, { "x-user-role": "admin" }),
-        timeout: 10000,
+        timeout: 6000,
       });
       if (res.data?.complaints && Array.isArray(res.data.complaints) && res.data.complaints.length > 0) {
         serverList = res.data.complaints;
       }
     } catch (fallbackErr) {
-      console.warn("Fallback test-db complaints note:", fallbackErr.message);
+      // silent
     }
   }
 

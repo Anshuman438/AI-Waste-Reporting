@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import axios from "axios";
 import { Doughnut } from "react-chartjs-2";
 import { 
@@ -65,43 +65,48 @@ const AdminDashboard = () => {
   const [dbTestResult, setDbTestResult] = useState(null);
   const [dbTesting, setDbTesting] = useState(false);
 
-  // Initial Fetch & Real-time Live Sync
-  useEffect(() => {
-    fetchData();
+  // Guarded fetch: isFetchingRef prevents concurrent in-flight requests
+  const isFetchingRef = useRef(false);
 
-    // Periodic sync every 4s across network/devices
-    const interval = setInterval(() => {
-      fetchData(true);
-    }, 4000);
+  const fetchData = useCallback(async (isBackground = false) => {
+    if (isFetchingRef.current) return; // block if already fetching
+    isFetchingRef.current = true;
 
-    const handleNewReport = () => {
-      fetchData(true);
-    };
-
-    window.addEventListener("new_complaint_reported", handleNewReport);
-    window.addEventListener("storage", handleNewReport);
-
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener("new_complaint_reported", handleNewReport);
-      window.removeEventListener("storage", handleNewReport);
-    };
-  }, []);
-
-  const fetchData = async (isBackground = false) => {
     if (!isBackground) setLoading(true);
     try {
       const token = localStorage.getItem("token");
       const list = await fetchAllComplaintsService(token);
-      if (Array.isArray(list)) {
+      if (Array.isArray(list) && list.length > 0) {
         setComplaints(list);
       }
-    } catch (error) {
-      console.log("Live complaints sync note:", error.message);
+    } catch (_) {
+      // swallow silently - no console spam
     } finally {
       if (!isBackground) setLoading(false);
+      isFetchingRef.current = false;
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+
+    // 30s interval - safe for serverless cold-start latency (~3s per call)
+    const interval = setInterval(() => {
+      fetchData(true);
+    }, 30000);
+
+    const handleNewReport = () => {
+      // Brief delay so the new record is persisted before re-fetching
+      setTimeout(() => fetchData(true), 1500);
+    };
+
+    window.addEventListener("new_complaint_reported", handleNewReport);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("new_complaint_reported", handleNewReport);
+    };
+  }, [fetchData]);
 
   const updateStatus = async (id, status) => {
     setUpdatingId(id);
