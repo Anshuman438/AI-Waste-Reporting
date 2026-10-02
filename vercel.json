@@ -4,6 +4,34 @@
   "outputDirectory": "client/dist",
   "rewrites": [
     {
+      "source": "/api/complaints/:path*",
+      "destination": "/api/complaints.js"
+    },
+    {
+      "source": "/api/complaints",
+      "destination": "/api/complaints.js"
+    },
+    {
+      "source": "/api/auth/:path*",
+      "destination": "/api/auth.js"
+    },
+    {
+      "source": "/api/auth",
+      "destination": "/api/auth.js"
+    },
+    {
+      "source": "/api/test-db",
+      "destination": "/api/test-db.js"
+    },
+    {
+      "source": "/api/health",
+      "destination": "/api/index.js"
+    },
+    {
+      "source": "/api",
+      "destination": "/api/index.js"
+    },
+    {
       "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
