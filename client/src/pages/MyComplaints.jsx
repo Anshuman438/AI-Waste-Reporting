@@ -1,5 +1,4 @@
-import React, { useEffect, useState } from "react";
-import axios from "axios";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
   FiTrash2, 
@@ -9,17 +8,13 @@ import {
   FiCheckCircle, 
   FiAlertCircle, 
   FiPlus,
-  FiFilter,
-  FiX,
+  FiRefreshCw,
   FiTruck,
   FiAward,
   FiArrowLeft
 } from "react-icons/fi";
-import { LuLeaf, LuSparkles, LuCrown } from "react-icons/lu";
+import { LuLeaf, LuSparkles } from "react-icons/lu";
 import "./MyComplaints.css";
-
-import { API } from "../config/api";
-import { fetchUserComplaintsService, deleteComplaintService } from "../services/tidbService";
 
 const MyComplaints = () => {
   const navigate = useNavigate();
@@ -30,71 +25,177 @@ const MyComplaints = () => {
   const [deleteModalId, setDeleteModalId] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
-  useEffect(() => {
-    fetchData();
+  // ─── Fetch (guarded, no concurrent calls) ────────────────────────────────
+  const isFetchingRef = useRef(false);
 
-    // Auto-refresh when new complaint is reported or updated
-    const handleSync = () => {
-      fetchData(true);
-    };
-
-    window.addEventListener("new_complaint_reported", handleSync);
-    window.addEventListener("storage", handleSync);
-
-    const interval = setInterval(() => {
-      fetchData(true);
-    }, 3500);
-
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener("new_complaint_reported", handleSync);
-      window.removeEventListener("storage", handleSync);
-    };
-  }, []);
-
-  const fetchData = async (isBackground = false) => {
+  const fetchData = useCallback(async (isBackground = false) => {
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
     if (!isBackground) setLoading(true);
+
     try {
       const token = localStorage.getItem("token");
       const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
-      const userEmail = currentUser.email || "";
+      const userEmail = (currentUser.email || "").toLowerCase().trim();
+      const userId = String(currentUser._id || currentUser.id || "");
 
-      const userReports = await fetchUserComplaintsService(token, userEmail);
+      const headers = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      if (userEmail) headers["x-user-email"] = userEmail;
+      if (userId) headers["x-user-id"] = userId;
 
-      if (Array.isArray(userReports)) {
-        setComplaints(userReports);
+      // Fetch user-specific complaints from DB
+      let list = [];
+      try {
+        const r = await fetch(
+          `/api/complaints?mode=my&email=${encodeURIComponent(userEmail)}&user_id=${encodeURIComponent(userId)}`,
+          { headers }
+        );
+        if (r.ok) {
+          const data = await r.json();
+          if (Array.isArray(data) && data.length > 0) list = data;
+        }
+      } catch (_) {}
+
+      // Fallback: fetch all from test-db and filter client-side
+      if (list.length === 0) {
+        try {
+          const r = await fetch("/api/test-db", { headers });
+          if (r.ok) {
+            const data = await r.json();
+            if (Array.isArray(data.complaints)) {
+              list = data.complaints.filter((c) => {
+                const repEmail = (c.reportedBy?.email || "").toLowerCase().trim();
+                const repId = String(c.reportedBy?._id || c.reportedBy?.id || "");
+                return (
+                  (userEmail && repEmail === userEmail) ||
+                  (userId && repId === userId)
+                );
+              });
+            }
+          }
+        } catch (_) {}
       }
-    } catch (error) {
-      console.log("Fetching user complaints note:", error.message);
+
+      // Merge with localStorage (server data takes priority for status)
+      if (list.length > 0) {
+        // Server is authoritative for status - always use server list as base
+        const merged = new Map();
+        for (const item of list) {
+          merged.set(String(item._id || item.id), item);
+        }
+        // Add any local-only items (offline submissions)
+        try {
+          const local = JSON.parse(localStorage.getItem("safai_all_complaints") || "[]");
+          const userLocal = local.filter((c) => {
+            const repEmail = (c.reportedBy?.email || "").toLowerCase().trim();
+            const repId = String(c.reportedBy?._id || c.reportedBy?.id || "");
+            return (userEmail && repEmail === userEmail) || (userId && repId === userId);
+          });
+          for (const item of userLocal) {
+            const key = String(item._id || item.id);
+            if (!merged.has(key)) merged.set(key, item); // only add if not from server
+          }
+        } catch (_) {}
+
+        const result = Array.from(merged.values()).sort(
+          (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
+        );
+        setComplaints(result);
+      } else {
+        // Fallback to localStorage only
+        try {
+          const local = JSON.parse(localStorage.getItem("safai_all_complaints") || "[]");
+          const userLocal = local.filter((c) => {
+            const repEmail = (c.reportedBy?.email || "").toLowerCase().trim();
+            const repId = String(c.reportedBy?._id || c.reportedBy?.id || "");
+            return (userEmail && repEmail === userEmail) || (userId && repId === userId);
+          });
+          if (userLocal.length > 0) setComplaints(userLocal);
+        } catch (_) {}
+      }
+    } catch (_) {
+      // silent
     } finally {
       if (!isBackground) setLoading(false);
+      isFetchingRef.current = false;
     }
-  };
+  }, []);
 
+  useEffect(() => {
+    fetchData();
+
+    // Poll every 30s (not 3.5s - prevents cascade)
+    const interval = setInterval(() => fetchData(true), 30000);
+
+    // Listen for admin status_updated events — re-fetch immediately
+    const handleStatusUpdate = (e) => {
+      if (e.detail) {
+        // Instant local update from the CustomEvent detail
+        setComplaints((prev) =>
+          prev.map((c) =>
+            String(c._id || c.id) === String(e.detail.id)
+              ? { ...c, status: e.detail.status }
+              : c
+          )
+        );
+      }
+      // Also re-fetch from DB after a short delay for confirmation
+      setTimeout(() => fetchData(true), 1000);
+    };
+
+    const handleNewReport = () => setTimeout(() => fetchData(true), 1500);
+
+    window.addEventListener("status_updated", handleStatusUpdate);
+    window.addEventListener("new_complaint_reported", handleNewReport);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("status_updated", handleStatusUpdate);
+      window.removeEventListener("new_complaint_reported", handleNewReport);
+    };
+  }, [fetchData]);
+
+  // ─── Delete complaint ────────────────────────────────────────────────────
   const confirmDeleteComplaint = async () => {
     if (!deleteModalId) return;
     setDeleting(true);
 
     try {
       const token = localStorage.getItem("token");
-      await deleteComplaintService(deleteModalId, token);
-    } catch (error) {
-      // Handled locally
-    }
+      const headers = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
+      await fetch(`/api/complaints?id=${encodeURIComponent(deleteModalId)}`, {
+        method: "DELETE",
+        headers,
+      });
+
+      // Remove from localStorage too
+      try {
+        const stored = JSON.parse(localStorage.getItem("safai_all_complaints") || "[]");
+        const updated = stored.filter(
+          (c) => String(c._id || c.id) !== String(deleteModalId)
+        );
+        localStorage.setItem("safai_all_complaints", JSON.stringify(updated));
+        localStorage.setItem("user_complaints_data", JSON.stringify(updated));
+      } catch (_) {}
+    } catch (_) {}
 
     setComplaints((prev) =>
-      prev.filter((complaint) => (complaint._id !== deleteModalId && complaint.id !== deleteModalId))
+      prev.filter((c) => c._id !== deleteModalId && c.id !== deleteModalId)
     );
     setDeleteModalId(null);
     setDeleting(false);
   };
 
+  // ─── Helpers ─────────────────────────────────────────────────────────────
   const getStatusBadge = (status) => {
     if (status === "resolved") {
       return (
         <span className="royal-badge-status status-resolved">
           <FiCheckCircle size={13} />
-          <span>Resolved & Cleared</span>
+          <span>Resolved &amp; Cleared</span>
         </span>
       );
     }
@@ -114,38 +215,39 @@ const MyComplaints = () => {
     );
   };
 
-  // Filter complaints
   const filteredComplaints = complaints.filter((c) => {
     if (activeTab === "all") return true;
-    if (activeTab === "pending") return c.status === "pending";
-    if (activeTab === "in-progress") return c.status === "in-progress";
-    if (activeTab === "resolved") return c.status === "resolved";
-    return true;
+    return c.status === activeTab;
   });
 
   const formatDate = (isoString) => {
     if (!isoString) return "Recently";
     const date = new Date(isoString);
-    return date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    return isNaN(date.getTime())
+      ? String(isoString)
+      : date.toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
   };
 
   const totalPoints = complaints.length * 50;
+  const resolvedCount = complaints.filter((c) => c.status === "resolved").length;
+  const inProgressCount = complaints.filter((c) => c.status === "in-progress").length;
+  const pendingCount = complaints.filter((c) => (c.status || "pending") === "pending").length;
 
   return (
     <div className="my-complaints-royal-root">
       <div className="my-complaints-container">
-        
-        {/* Top Header Row */}
+
+        {/* Header */}
         <div className="my-complaints-header">
           <div className="header-left-col">
             <div className="header-top-tag-row">
-              <button 
-                type="button" 
+              <button
+                type="button"
                 className="btn-back-home"
                 onClick={() => navigate("/")}
               >
@@ -157,9 +259,10 @@ const MyComplaints = () => {
                 <span>My Civic Reports</span>
               </div>
             </div>
-            <h1 className="royal-complaints-title">Activity & History</h1>
+            <h1 className="royal-complaints-title">Activity &amp; History</h1>
             <p className="royal-complaints-sub">
-              Live tracking of all civic waste incidents you've reported across the municipal network.
+              Live tracking of all civic waste incidents you&apos;ve reported.
+              Status updates reflect municipal crew actions in real time.
             </p>
           </div>
 
@@ -177,8 +280,8 @@ const MyComplaints = () => {
               </div>
             </div>
 
-            <button 
-              type="button" 
+            <button
+              type="button"
               className="btn-royal-new-report"
               onClick={() => navigate("/report")}
             >
@@ -188,51 +291,63 @@ const MyComplaints = () => {
           </div>
         </div>
 
-        {/* Filter Navigation Tabs */}
+        {/* Status Summary Row */}
+        <div style={{ display: "flex", gap: "12px", marginBottom: "20px", flexWrap: "wrap" }}>
+          <div style={{
+            background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: "10px",
+            padding: "10px 18px", fontSize: "13px", fontWeight: "600", color: "#c2410c"
+          }}>
+            ⏳ Pending: {pendingCount}
+          </div>
+          <div style={{
+            background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: "10px",
+            padding: "10px 18px", fontSize: "13px", fontWeight: "600", color: "#1d4ed8"
+          }}>
+            🚚 In Progress: {inProgressCount}
+          </div>
+          <div style={{
+            background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: "10px",
+            padding: "10px 18px", fontSize: "13px", fontWeight: "600", color: "#15803d"
+          }}>
+            ✅ Resolved: {resolvedCount}
+          </div>
+          <button
+            type="button"
+            onClick={() => fetchData()}
+            disabled={loading}
+            style={{
+              background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "10px",
+              padding: "10px 16px", fontSize: "13px", fontWeight: "600", color: "#475569",
+              cursor: "pointer", display: "flex", alignItems: "center", gap: "6px"
+            }}
+          >
+            <FiRefreshCw size={13} className={loading ? "spin-icon" : ""} />
+            {loading ? "Syncing..." : "Refresh"}
+          </button>
+        </div>
+
+        {/* Filter Tabs */}
         <div className="complaints-filter-bar">
           <div className="filter-tab-group">
-            <button 
-              type="button"
-              className={`filter-pill-btn ${activeTab === "all" ? "active" : ""}`}
-              onClick={() => setActiveTab("all")}
-            >
-              <span>All Reports</span>
-              <span className="tab-count-bubble">{complaints.length}</span>
-            </button>
-            <button 
-              type="button"
-              className={`filter-pill-btn ${activeTab === "pending" ? "active" : ""}`}
-              onClick={() => setActiveTab("pending")}
-            >
-              <span>Pending</span>
-              <span className="tab-count-bubble">
-                {complaints.filter((c) => c.status === "pending").length}
-              </span>
-            </button>
-            <button 
-              type="button"
-              className={`filter-pill-btn ${activeTab === "in-progress" ? "active" : ""}`}
-              onClick={() => setActiveTab("in-progress")}
-            >
-              <span>In Progress</span>
-              <span className="tab-count-bubble">
-                {complaints.filter((c) => c.status === "in-progress").length}
-              </span>
-            </button>
-            <button 
-              type="button"
-              className={`filter-pill-btn ${activeTab === "resolved" ? "active" : ""}`}
-              onClick={() => setActiveTab("resolved")}
-            >
-              <span>Resolved</span>
-              <span className="tab-count-bubble">
-                {complaints.filter((c) => c.status === "resolved").length}
-              </span>
-            </button>
+            {["all", "pending", "in-progress", "resolved"].map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                className={`filter-pill-btn ${activeTab === tab ? "active" : ""}`}
+                onClick={() => setActiveTab(tab)}
+              >
+                <span>{tab === "all" ? "All Reports" : tab === "in-progress" ? "In Progress" : tab.charAt(0).toUpperCase() + tab.slice(1)}</span>
+                <span className="tab-count-bubble">
+                  {tab === "all"
+                    ? complaints.length
+                    : complaints.filter((c) => c.status === tab).length}
+                </span>
+              </button>
+            ))}
           </div>
         </div>
 
-        {/* Complaints Grid Content */}
+        {/* Content */}
         {loading && complaints.length === 0 ? (
           <div className="complaints-loading-state">
             <div className="royal-spinner"></div>
@@ -245,12 +360,12 @@ const MyComplaints = () => {
             </div>
             <h3>No reports found</h3>
             <p>
-              {activeTab === "all" 
-                ? "You haven't submitted any civic waste reports yet. Help keep your city clean by reporting a spot!" 
-                : `No reports currently under the '${activeTab}' filter.`}
+              {activeTab === "all"
+                ? "You haven't submitted any civic waste reports yet. Help keep your city clean!"
+                : `No reports currently under the '${activeTab}' status.`}
             </p>
-            <button 
-              type="button" 
+            <button
+              type="button"
               className="btn-empty-create"
               onClick={() => navigate("/report")}
             >
@@ -266,12 +381,12 @@ const MyComplaints = () => {
 
               return (
                 <div key={compId} className="complaint-royal-card">
-                  {/* Card Image Banner */}
+                  {/* Image Banner */}
                   <div className="complaint-card-media">
-                    <img 
-                      src={item.imageUrl || "https://images.unsplash.com/photo-1530587191325-3db32d826c18?w=500&auto=format&fit=crop&q=80"} 
-                      alt="Reported waste spot" 
-                      className="complaint-img-cover" 
+                    <img
+                      src={item.imageUrl || "https://images.unsplash.com/photo-1530587191325-3db32d826c18?w=500&auto=format&fit=crop&q=80"}
+                      alt="Reported waste spot"
+                      className="complaint-img-cover"
                     />
                     <div className="media-overlay-badges">
                       <span className={`waste-type-tag tag-${wasteType}`}>
@@ -304,15 +419,35 @@ const MyComplaints = () => {
                       </div>
                     </div>
 
-                    {/* Footer Actions */}
+                    {/* Status description */}
+                    <div style={{
+                      marginTop: "8px",
+                      padding: "8px 12px",
+                      borderRadius: "8px",
+                      fontSize: "12px",
+                      fontWeight: "500",
+                      background: item.status === "resolved" ? "#f0fdf4"
+                        : item.status === "in-progress" ? "#eff6ff" : "#fff7ed",
+                      color: item.status === "resolved" ? "#15803d"
+                        : item.status === "in-progress" ? "#1d4ed8" : "#92400e",
+                      border: `1px solid ${item.status === "resolved" ? "#bbf7d0"
+                        : item.status === "in-progress" ? "#bfdbfe" : "#fed7aa"}`
+                    }}>
+                      {item.status === "resolved"
+                        ? "✅ Municipal crew has cleared this waste spot. Thank you for reporting!"
+                        : item.status === "in-progress"
+                        ? "🚚 Crew dispatched — cleaning is underway at this location."
+                        : "⏳ Report received. Municipal team will assign a crew soon."}
+                    </div>
+
+                    {/* Footer */}
                     <div className="complaint-card-footer">
                       <div className="reward-earned-chip">
                         <LuSparkles size={13} />
                         <span>+50 XP Earned</span>
                       </div>
-
-                      <button 
-                        type="button" 
+                      <button
+                        type="button"
                         className="btn-delete-report"
                         title="Delete report"
                         onClick={() => setDeleteModalId(compId)}
@@ -337,21 +472,24 @@ const MyComplaints = () => {
                 </div>
                 <div className="modal-title-area">
                   <h3>Delete Civic Report?</h3>
-                  <p>Are you sure you want to delete report #{String(deleteModalId).slice(-6)}? This action cannot be undone.</p>
+                  <p>
+                    Are you sure you want to delete report #{String(deleteModalId).slice(-6)}?
+                    This action cannot be undone.
+                  </p>
                 </div>
               </div>
               <div className="c-modal-actions">
-                <button 
-                  type="button" 
-                  className="btn-modal-cancel" 
+                <button
+                  type="button"
+                  className="btn-modal-cancel"
                   onClick={() => setDeleteModalId(null)}
                   disabled={deleting}
                 >
                   Cancel
                 </button>
-                <button 
-                  type="button" 
-                  className="btn-modal-delete" 
+                <button
+                  type="button"
+                  className="btn-modal-delete"
                   onClick={confirmDeleteComplaint}
                   disabled={deleting}
                 >

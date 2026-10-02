@@ -134,14 +134,39 @@ const AdminDashboard = () => {
   const updateStatus = async (id, status) => {
     setUpdatingId(id);
 
-    // Optimistic local UI update
+    // Optimistic local UI update immediately
     setComplaints((prev) =>
       prev.map((c) => ((c._id === id || c.id === id) ? { ...c, status } : c))
     );
 
     try {
       const token = localStorage.getItem("token");
-      await updateComplaintStatusService(id, status, token);
+
+      // Update in TiDB via API
+      const res = await fetch("/api/complaints", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "x-user-role": "admin",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ id, status }),
+      });
+
+      if (res.ok) {
+        // Also update localStorage so MyComplaints page sees the change immediately
+        try {
+          const stored = JSON.parse(localStorage.getItem("safai_all_complaints") || "[]");
+          const updated = stored.map((c) =>
+            String(c._id || c.id) === String(id) ? { ...c, status } : c
+          );
+          localStorage.setItem("safai_all_complaints", JSON.stringify(updated));
+          localStorage.setItem("user_complaints_data", JSON.stringify(updated));
+        } catch (_) {}
+
+        // Notify MyComplaints page to re-fetch from DB
+        window.dispatchEvent(new CustomEvent("status_updated", { detail: { id, status } }));
+      }
     } catch (error) {
       console.warn("Status update error:", error);
     } finally {
