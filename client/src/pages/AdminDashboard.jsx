@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import axios from "axios";
 import { Doughnut } from "react-chartjs-2";
 import { 
@@ -9,26 +9,23 @@ import {
 } from "chart.js";
 import { 
   FiSearch, 
-  FiFilter, 
   FiMapPin, 
   FiCheckCircle, 
   FiClock, 
   FiAlertCircle, 
   FiUser, 
-  FiLayers, 
-  FiBarChart2, 
   FiRefreshCw,
   FiShield,
   FiCalendar,
   FiArrowLeft,
   FiTruck,
-  FiZap,
-  FiPlusCircle,
   FiKey,
   FiDatabase,
-  FiX
+  FiX,
+  FiTrash2,
+  FiExternalLink
 } from "react-icons/fi";
-import { LuLeaf } from "react-icons/lu";
+import { LuLeaf, LuSparkles, LuTrash2 as LuTrashIcon } from "react-icons/lu";
 import { useNavigate } from "react-router-dom";
 import AdminSidebar from "../components/AdminSidebar";
 import ComplaintMap from "../components/ComplaintMap";
@@ -41,34 +38,41 @@ import { API } from "../config/api";
 import { 
   fetchAllComplaintsService, 
   updateComplaintStatusService,
+  deleteComplaintService,
   getDatabaseUrl,
   setCustomDatabaseUrl
 } from "../services/tidbService";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
-  const [complaints, setComplaints] = useState([]);
 
-  const [filter, setFilter] = useState("all");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  // Primary Data States
+  const [complaints, setComplaints] = useState([]);
   const [loading, setLoading] = useState(false);
   const [updatingId, setUpdatingId] = useState(null);
-  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [deleteModalId, setDeleteModalId] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
-  // TiDB Cloud Live Status & Diagnostic Modal
+  // Filters & Search
+  const [filter, setFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Modals
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [showDbModal, setShowDbModal] = useState(false);
   const [dbUrlInput, setDbUrlInput] = useState(getDatabaseUrl() || "");
   const [dbTestResult, setDbTestResult] = useState(null);
   const [dbTesting, setDbTesting] = useState(false);
 
+  // Initial Fetch & Real-time Live Sync
   useEffect(() => {
     fetchData();
 
-    // Auto-fetch polling every 3 seconds for real-time reporting sync
+    // Periodic sync every 4s across network/devices
     const interval = setInterval(() => {
       fetchData(true);
-    }, 3000);
+    }, 4000);
 
     const handleNewReport = () => {
       fetchData(true);
@@ -93,7 +97,7 @@ const AdminDashboard = () => {
         setComplaints(list);
       }
     } catch (error) {
-      console.log("Using live complaints telemetry note:", error.message);
+      console.log("Live complaints sync note:", error.message);
     } finally {
       if (!isBackground) setLoading(false);
     }
@@ -102,7 +106,7 @@ const AdminDashboard = () => {
   const updateStatus = async (id, status) => {
     setUpdatingId(id);
 
-    // Optimistic local state update
+    // Optimistic local UI update
     setComplaints((prev) =>
       prev.map((c) => ((c._id === id || c.id === id) ? { ...c, status } : c))
     );
@@ -111,8 +115,27 @@ const AdminDashboard = () => {
       const token = localStorage.getItem("token");
       await updateComplaintStatusService(id, status, token);
     } catch (error) {
+      console.warn("Status update error:", error);
     } finally {
       setUpdatingId(null);
+    }
+  };
+
+  const handleDeleteComplaint = async () => {
+    if (!deleteModalId) return;
+    setDeleting(true);
+
+    try {
+      const token = localStorage.getItem("token");
+      await deleteComplaintService(deleteModalId, token);
+      setComplaints((prev) =>
+        prev.filter((c) => c._id !== deleteModalId && c.id !== deleteModalId)
+      );
+    } catch (err) {
+      console.warn("Delete incident note:", err);
+    } finally {
+      setDeleteModalId(null);
+      setDeleting(false);
     }
   };
 
@@ -126,7 +149,6 @@ const AdminDashboard = () => {
     }
 
     try {
-      // 1. Test via Serverless Backend API (Node.js runtime has full TCP/HTTPS network access with zero browser CORS blocks)
       const res = await axios.post(
         `${API}/api/test-db`,
         { url: inputToTest },
@@ -145,11 +167,7 @@ const AdminDashboard = () => {
           setComplaints(res.data.complaints);
         }
       }
-      if (res.data?.connected) {
-        await fetchData(true);
-      }
     } catch (err) {
-      // 2. Fallback to direct GET /api/test-db
       try {
         const getRes = await axios.get(`${API}/api/test-db?url=${encodeURIComponent(inputToTest)}`, { timeout: 8000 });
         setDbTestResult(getRes.data);
@@ -169,41 +187,44 @@ const AdminDashboard = () => {
     }
   };
 
-  // Filter complaints based on sidebar wasteType + status + search query
-  const filteredList = complaints.filter((c) => {
-    const matchesCategory =
-      filter === "all" ||
-      c.wasteType?.toLowerCase() === filter.toLowerCase() ||
-      (filter === "bio" && c.wasteType?.toLowerCase() === "biodegradable") ||
-      (filter === "biodegradable" && c.wasteType?.toLowerCase() === "biodegradable");
+  // Filtered List calculation
+  const filteredList = useMemo(() => {
+    return complaints.filter((c) => {
+      const wType = (c.wasteType || "").toLowerCase();
 
-    const matchesStatus =
-      statusFilter === "all" || c.status === statusFilter;
+      const matchesCategory =
+        filter === "all" ||
+        wType === filter.toLowerCase() ||
+        (filter === "bio" && wType === "biodegradable") ||
+        (filter === "biodegradable" && wType === "biodegradable");
 
-    const matchesSearch =
-      !searchQuery ||
-      c.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.wasteType?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.location?.address?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.locationName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.reportedBy?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.reportedBy?.email?.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesStatus =
+        statusFilter === "all" || c.status === statusFilter;
 
-    return matchesCategory && matchesStatus && matchesSearch;
-  });
+      const q = searchQuery.toLowerCase().trim();
+      const matchesSearch =
+        !q ||
+        (c.description && c.description.toLowerCase().includes(q)) ||
+        (c.wasteType && c.wasteType.toLowerCase().includes(q)) ||
+        (c.location?.address && c.location.address.toLowerCase().includes(q)) ||
+        (c.locationName && c.locationName.toLowerCase().includes(q)) ||
+        (c.reportedBy?.name && c.reportedBy.name.toLowerCase().includes(q)) ||
+        (c.reportedBy?.email && c.reportedBy.email.toLowerCase().includes(q)) ||
+        String(c._id || c.id || "").includes(q);
 
-  const activeComplaints = filteredList.filter((c) => c.status !== "resolved");
-  const resolvedComplaints = filteredList.filter((c) => c.status === "resolved");
+      return matchesCategory && matchesStatus && matchesSearch;
+    });
+  }, [complaints, filter, statusFilter, searchQuery]);
 
-  // Summary Metrics
+  // Metric Totals
   const totalCount = complaints.length;
-  const pendingCount = complaints.filter((c) => c.status === "pending").length;
+  const pendingCount = complaints.filter((c) => (c.status || "pending") === "pending").length;
   const inProgressCount = complaints.filter((c) => c.status === "in-progress").length;
   const resolvedCount = complaints.filter((c) => c.status === "resolved").length;
 
-  const plasticCount = complaints.filter((c) => c.wasteType?.toLowerCase() === "plastic").length;
-  const metalCount = complaints.filter((c) => c.wasteType?.toLowerCase() === "metal").length;
-  const bioCount = complaints.filter((c) => c.wasteType?.toLowerCase() === "biodegradable").length;
+  const plasticCount = complaints.filter((c) => (c.wasteType || "").toLowerCase() === "plastic").length;
+  const metalCount = complaints.filter((c) => (c.wasteType || "").toLowerCase() === "metal").length;
+  const bioCount = complaints.filter((c) => (c.wasteType || "").toLowerCase() === "biodegradable").length;
 
   const categoryStats = {
     all: totalCount,
@@ -212,12 +233,12 @@ const AdminDashboard = () => {
     biodegradable: bioCount
   };
 
-  // Chart Data Configuration
+  // Donut Chart Configuration
   const chartData = {
     labels: ["Plastic", "Metal", "Biodegradable"],
     datasets: [
       {
-        data: [plasticCount || 1, metalCount || 1, bioCount || 1],
+        data: [plasticCount || (totalCount === 0 ? 1 : 0), metalCount || (totalCount === 0 ? 1 : 0), bioCount || (totalCount === 0 ? 1 : 0)],
         backgroundColor: ["#3b82f6", "#64748b", "#10b981"],
         hoverBackgroundColor: ["#2563eb", "#475569", "#059669"],
         borderWidth: 3,
@@ -245,7 +266,8 @@ const AdminDashboard = () => {
 
   const formatDate = (iso) => {
     if (!iso) return "Just now";
-    return new Date(iso).toLocaleDateString("en-US", {
+    const d = new Date(iso);
+    return isNaN(d.getTime()) ? String(iso) : d.toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
       hour: "2-digit",
@@ -273,11 +295,11 @@ const AdminDashboard = () => {
                 className="btn-back-to-site"
                 onClick={() => navigate("/")}
               >
-                <FiArrowLeft size={16} />
+                <FiArrowLeft size={15} />
                 <span>Exit to Main Site</span>
               </button>
               <div className="admin-title-badge">
-                <FiShield size={12} /> Municipal Operations
+                <FiShield size={13} /> Municipal Operations
               </div>
             </div>
             <h1>AI Waste Control Center</h1>
@@ -293,7 +315,6 @@ const AdminDashboard = () => {
                 handleTestDatabase();
               }}
               title="Inspect TiDB Cloud Database Connection"
-              style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
             >
               <FiDatabase size={15} />
               <span>TiDB Status</span>
@@ -322,7 +343,7 @@ const AdminDashboard = () => {
           </div>
         </div>
 
-        {/* Stats & Analytics Row */}
+        {/* Metrics Grid */}
         <div className="admin-metrics-grid">
           
           <div className="metric-card total">
@@ -373,7 +394,7 @@ const AdminDashboard = () => {
             <div className="card-heading-row">
               <div className="heading-title-group">
                 <h3>Live Incident Geo-Map</h3>
-                <span className="sub-heading-text">Interactive dispatch radar</span>
+                <span className="sub-heading-text">Interactive dispatch radar across urban sectors</span>
               </div>
               <span className="map-counter-badge">{complaints.length} Geo-pins</span>
             </div>
@@ -403,10 +424,19 @@ const AdminDashboard = () => {
             <FiSearch className="search-icon" />
             <input
               type="text"
-              placeholder="Search by waste type, description, location, or citizen name..."
+              placeholder="Search by waste type, description, location, citizen name, or ID..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
+            {searchQuery && (
+              <button 
+                type="button" 
+                className="search-clear-btn" 
+                onClick={() => setSearchQuery("")}
+              >
+                ✕
+              </button>
+            )}
           </div>
 
           <div className="toolbar-status-filters">
@@ -444,8 +474,16 @@ const AdminDashboard = () => {
         {/* Incidents Table / Cards Grid */}
         <div className="admin-table-container">
           <div className="table-header-info">
-            <h3>Registered Incidents ({filteredList.length})</h3>
-            <span className="table-subtext">Click on any dropdown to update municipal resolution status in real time.</span>
+            <div>
+              <h3>Registered Incidents ({filteredList.length})</h3>
+              <span className="table-subtext">Review citizen reports and assign municipal crew resolution status.</span>
+            </div>
+            {filter !== "all" && (
+              <span className="filter-active-pill">
+                Filtered by: <strong>{filter}</strong>
+                <button type="button" onClick={() => setFilter("all")}>✕</button>
+              </span>
+            )}
           </div>
 
           {loading && complaints.length === 0 ? (
@@ -455,9 +493,13 @@ const AdminDashboard = () => {
             </div>
           ) : filteredList.length === 0 ? (
             <div className="admin-empty-state">
-              <FiCheckCircle size={40} className="empty-icon" />
+              <FiCheckCircle size={44} className="empty-icon" />
               <h4>No matching incidents found</h4>
-              <p>All clean! There are no reports matching your current filter criteria.</p>
+              <p>
+                {complaints.length === 0 
+                  ? "No incidents in database yet. New citizen reports will automatically appear here in real time." 
+                  : "There are no reports matching your current filter criteria."}
+              </p>
             </div>
           ) : (
             <div className="incident-cards-list">
@@ -476,7 +518,7 @@ const AdminDashboard = () => {
                         className="thumb-img"
                       />
                       <span className={`thumb-badge badge-${wasteType}`}>
-                        {wasteType}
+                        {wasteType === "biodegradable" ? "🌿 Bio" : wasteType === "plastic" ? "🧴 Plastic" : "🥫 Metal"}
                       </span>
                     </div>
 
@@ -494,15 +536,15 @@ const AdminDashboard = () => {
                       </h4>
 
                       <div className="incident-meta-chips">
-                        <div className="meta-chip">
-                          <FiMapPin size={13} />
-                          <span title={complaint.location?.address || complaint.locationName}>
+                        <div className="meta-chip" title={complaint.location?.address || complaint.locationName}>
+                          <FiMapPin size={13} className="meta-icon" />
+                          <span>
                             {complaint.location?.address || complaint.locationName || "Civic Coordinates Captured"}
                           </span>
                         </div>
                         
                         <div className="meta-chip">
-                          <FiUser size={13} />
+                          <FiUser size={13} className="meta-icon" />
                           <span>
                             {complaint.reportedBy?.name || "Citizen Reporter"} 
                             {complaint.reportedBy?.email ? ` (${complaint.reportedBy.email})` : ""}
@@ -511,22 +553,33 @@ const AdminDashboard = () => {
                       </div>
                     </div>
 
-                    {/* Status Update Dropdown */}
+                    {/* Status Update & Actions Column */}
                     <div className="incident-action-col">
-                      <label className="action-label">Resolution Status</label>
-                      <select
-                        className={`status-select-control select-${complaint.status || "pending"}`}
-                        value={complaint.status || "pending"}
-                        onChange={(e) => updateStatus(compId, e.target.value)}
-                        disabled={updatingId === compId}
+                      <div className="action-control-group">
+                        <label className="action-label">Resolution Status</label>
+                        <select
+                          className={`status-select-control select-${complaint.status || "pending"}`}
+                          value={complaint.status || "pending"}
+                          onChange={(e) => updateStatus(compId, e.target.value)}
+                          disabled={updatingId === compId}
+                        >
+                          <option value="pending">⏳ Pending Triage</option>
+                          <option value="in-progress">🚚 In Progress</option>
+                          <option value="resolved">✅ Resolved & Cleared</option>
+                        </select>
+                        {updatingId === compId && (
+                          <span className="updating-status-text">Updating DB...</span>
+                        )}
+                      </div>
+
+                      <button 
+                        type="button" 
+                        className="btn-delete-incident"
+                        title="Delete Incident"
+                        onClick={() => setDeleteModalId(compId)}
                       >
-                        <option value="pending">⏳ Pending Triage</option>
-                        <option value="in-progress">🚚 In Progress</option>
-                        <option value="resolved">✅ Resolved & Cleared</option>
-                      </select>
-                      {updatingId === compId && (
-                        <span className="updating-status-text">Updating DB...</span>
-                      )}
+                        <FiTrash2 size={15} />
+                      </button>
                     </div>
 
                   </div>
@@ -544,6 +597,41 @@ const AdminDashboard = () => {
         onClose={() => setShowPasswordModal(false)} 
       />
 
+      {/* Delete Confirmation Modal */}
+      {deleteModalId && (
+        <div className="c-modal-overlay" onClick={() => setDeleteModalId(null)}>
+          <div className="c-modal-card animate-pop" onClick={(e) => e.stopPropagation()}>
+            <div className="c-modal-header">
+              <div className="warn-icon-badge">
+                <FiAlertCircle size={22} />
+              </div>
+              <div className="modal-title-area">
+                <h3>Delete Incident Report?</h3>
+                <p>Are you sure you want to remove report #{String(deleteModalId).slice(-6)} from TiDB Cloud database? This cannot be undone.</p>
+              </div>
+            </div>
+            <div className="c-modal-actions">
+              <button 
+                type="button" 
+                className="btn-modal-cancel" 
+                onClick={() => setDeleteModalId(null)}
+                disabled={deleting}
+              >
+                Cancel
+              </button>
+              <button 
+                type="button" 
+                className="btn-modal-delete" 
+                onClick={handleDeleteComplaint}
+                disabled={deleting}
+              >
+                {deleting ? "Deleting..." : "Yes, Delete Report"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* TiDB Cloud Diagnostic & Connection Modal */}
       {showDbModal && (
         <div className="pwd-modal-overlay" onClick={() => setShowDbModal(false)}>
@@ -554,7 +642,7 @@ const AdminDashboard = () => {
               </div>
               <div className="pwd-header-titles">
                 <h3>TiDB Cloud Live Diagnostics</h3>
-                <p>Verify live database connectivity and table status.</p>
+                <p>Verify live database connectivity and cluster telemetry.</p>
               </div>
               <button type="button" className="pwd-btn-close" onClick={() => setShowDbModal(false)}>
                 <FiX size={18} />
@@ -576,7 +664,7 @@ const AdminDashboard = () => {
                   }}
                 >
                   <div style={{ fontWeight: "700", marginBottom: "4px" }}>
-                    {dbTestResult.connected ? "✅ Database Connected" : "⚠️ Connection Notice"}
+                    {dbTestResult.connected ? "✅ Database Connected & Active" : "⚠️ Connection Notice"}
                   </div>
                   <div>{dbTestResult.message}</div>
                   {dbTestResult.stats && (
