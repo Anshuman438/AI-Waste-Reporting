@@ -180,7 +180,12 @@
 
 /* Filter Tabs Bar */
 .complaints-filter-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
   margin-bottom: 28px;
+  flex-wrap: wrap;
 }
 
 .filter-tab-group {
@@ -188,6 +193,34 @@
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.filter-refresh-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: #ffffff;
+  border: 1.5px solid #dfd8cb;
+  color: #475a52;
+  font-size: 0.84rem;
+  font-weight: 700;
+  padding: 8px 18px;
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  font-family: inherit;
+}
+
+.filter-refresh-btn:hover:not(:disabled) {
+  background: #fdfbf7;
+  color: #0d382b;
+  border-color: #c59b4c;
+  transform: translateY(-1px);
+}
+
+.filter-refresh-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .filter-pill-btn {

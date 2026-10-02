@@ -289,60 +289,53 @@ const MyComplaints = () => {
           </div>
         </div>
 
-        {/* Status Summary Row */}
-        <div style={{ display: "flex", gap: "12px", marginBottom: "20px", flexWrap: "wrap" }}>
-          <div style={{
-            background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: "10px",
-            padding: "10px 18px", fontSize: "13px", fontWeight: "600", color: "#c2410c"
-          }}>
-            ⏳ Pending: {pendingCount}
-          </div>
-          <div style={{
-            background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: "10px",
-            padding: "10px 18px", fontSize: "13px", fontWeight: "600", color: "#1d4ed8"
-          }}>
-            🚚 In Progress: {inProgressCount}
-          </div>
-          <div style={{
-            background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: "10px",
-            padding: "10px 18px", fontSize: "13px", fontWeight: "600", color: "#15803d"
-          }}>
-            ✅ Resolved: {resolvedCount}
-          </div>
-          <button
-            type="button"
-            onClick={() => fetchData()}
-            disabled={loading}
-            style={{
-              background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "10px",
-              padding: "10px 16px", fontSize: "13px", fontWeight: "600", color: "#475569",
-              cursor: "pointer", display: "flex", alignItems: "center", gap: "6px"
-            }}
-          >
-            <FiRefreshCw size={13} className={loading ? "spin-icon" : ""} />
-            {loading ? "Syncing..." : "Refresh"}
-          </button>
-        </div>
-
-        {/* Filter Tabs */}
+        {/* Filter Navigation Bar */}
         <div className="complaints-filter-bar">
           <div className="filter-tab-group">
-            {["all", "pending", "in-progress", "resolved"].map((tab) => (
-              <button
-                key={tab}
-                type="button"
-                className={`filter-pill-btn ${activeTab === tab ? "active" : ""}`}
-                onClick={() => setActiveTab(tab)}
-              >
-                <span>{tab === "all" ? "All Reports" : tab === "in-progress" ? "In Progress" : tab.charAt(0).toUpperCase() + tab.slice(1)}</span>
-                <span className="tab-count-bubble">
-                  {tab === "all"
-                    ? complaints.length
-                    : complaints.filter((c) => c.status === tab).length}
-                </span>
-              </button>
-            ))}
+            <button
+              type="button"
+              className={`filter-pill-btn ${activeTab === "all" ? "active" : ""}`}
+              onClick={() => setActiveTab("all")}
+            >
+              <span>All Reports</span>
+              <span className="tab-count-bubble">{complaints.length}</span>
+            </button>
+            <button
+              type="button"
+              className={`filter-pill-btn ${activeTab === "pending" ? "active" : ""}`}
+              onClick={() => setActiveTab("pending")}
+            >
+              <span>⏳ Pending</span>
+              <span className="tab-count-bubble">{pendingCount}</span>
+            </button>
+            <button
+              type="button"
+              className={`filter-pill-btn ${activeTab === "in-progress" ? "active" : ""}`}
+              onClick={() => setActiveTab("in-progress")}
+            >
+              <span>🚚 In Progress</span>
+              <span className="tab-count-bubble">{inProgressCount}</span>
+            </button>
+            <button
+              type="button"
+              className={`filter-pill-btn ${activeTab === "resolved" ? "active" : ""}`}
+              onClick={() => setActiveTab("resolved")}
+            >
+              <span>✅ Resolved</span>
+              <span className="tab-count-bubble">{resolvedCount}</span>
+            </button>
           </div>
+
+          <button
+            type="button"
+            className="filter-refresh-btn"
+            onClick={() => fetchData()}
+            disabled={loading}
+            title="Refresh reports"
+          >
+            <FiRefreshCw size={13} className={loading ? "spin-icon" : ""} />
+            <span>{loading ? "Syncing..." : "Refresh"}</span>
+          </button>
         </div>
 
         {/* Content */}
