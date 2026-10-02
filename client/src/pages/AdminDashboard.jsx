@@ -65,22 +65,54 @@ const AdminDashboard = () => {
   const [dbTestResult, setDbTestResult] = useState(null);
   const [dbTesting, setDbTesting] = useState(false);
 
+  // Fetch error state for debugging
+  const [fetchError, setFetchError] = useState(null);
+
   // Guarded fetch: isFetchingRef prevents concurrent in-flight requests
   const isFetchingRef = useRef(false);
 
   const fetchData = useCallback(async (isBackground = false) => {
-    if (isFetchingRef.current) return; // block if already fetching
+    if (isFetchingRef.current) return;
     isFetchingRef.current = true;
+    if (!isBackground) { setLoading(true); setFetchError(null); }
 
-    if (!isBackground) setLoading(true);
     try {
+      // Direct fetch - no axios, no service layer complexity
       const token = localStorage.getItem("token");
-      const list = await fetchAllComplaintsService(token);
-      if (Array.isArray(list) && list.length > 0) {
-        setComplaints(list);
+      const headers = { "x-user-role": "admin" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
+      // Primary: /api/complaints
+      let list = [];
+      try {
+        const r = await fetch("/api/complaints", { headers });
+        if (r.ok) {
+          const data = await r.json();
+          if (Array.isArray(data) && data.length > 0) list = data;
+        }
+      } catch (_) {}
+
+      // Fallback: /api/test-db
+      if (list.length === 0) {
+        try {
+          const r = await fetch("/api/test-db", { headers });
+          if (r.ok) {
+            const data = await r.json();
+            if (Array.isArray(data.complaints) && data.complaints.length > 0) {
+              list = data.complaints;
+            }
+          }
+        } catch (_) {}
       }
-    } catch (_) {
-      // swallow silently - no console spam
+
+      if (list.length > 0) {
+        setComplaints(list);
+        setFetchError(null);
+      } else if (!isBackground) {
+        setFetchError("No complaints returned from API. Database may be empty or unreachable.");
+      }
+    } catch (err) {
+      if (!isBackground) setFetchError(err.message);
     } finally {
       if (!isBackground) setLoading(false);
       isFetchingRef.current = false;
@@ -89,19 +121,10 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     fetchData();
-
-    // 30s interval - safe for serverless cold-start latency (~3s per call)
-    const interval = setInterval(() => {
-      fetchData(true);
-    }, 30000);
-
-    const handleNewReport = () => {
-      // Brief delay so the new record is persisted before re-fetching
-      setTimeout(() => fetchData(true), 1500);
-    };
-
+    // Poll every 30s — safe for serverless cold-start latency
+    const interval = setInterval(() => fetchData(true), 30000);
+    const handleNewReport = () => setTimeout(() => fetchData(true), 1500);
     window.addEventListener("new_complaint_reported", handleNewReport);
-
     return () => {
       clearInterval(interval);
       window.removeEventListener("new_complaint_reported", handleNewReport);
@@ -493,6 +516,20 @@ const AdminDashboard = () => {
             <div className="table-loading-state">
               <div className="royal-spinner"></div>
               <p>Fetching incident feed from TiDB Cloud database...</p>
+            </div>
+          ) : fetchError && complaints.length === 0 ? (
+            <div className="admin-empty-state" style={{ borderTop: "3px solid #f59e0b" }}>
+              <FiAlertCircle size={44} className="empty-icon" style={{ color: "#f59e0b" }} />
+              <h4>Database Fetch Notice</h4>
+              <p style={{ color: "#92400e", fontSize: "13px" }}>{fetchError}</p>
+              <button 
+                type="button" 
+                className="btn-primary" 
+                onClick={() => fetchData()}
+                style={{ marginTop: "12px", padding: "8px 20px" }}
+              >
+                <FiRefreshCw size={14} style={{ marginRight: "6px" }} /> Retry Now
+              </button>
             </div>
           ) : filteredList.length === 0 ? (
             <div className="admin-empty-state">
