@@ -39,17 +39,18 @@ const saveLocalStore = (list) => {
   } catch (e) {}
 };
 
+// Build request headers — no x-db-url (server uses its own env var)
 const getRequestHeaders = (authToken, extra = {}) => {
   const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
   const token = authToken || localStorage.getItem("token");
-  const dbUrl = getDatabaseUrl();
 
   return {
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...(currentUser.email ? { "x-user-email": currentUser.email } : {}),
-    ...(currentUser._id || currentUser.id ? { "x-user-id": String(currentUser._id || currentUser.id) } : {}),
+    ...(currentUser._id || currentUser.id
+      ? { "x-user-id": String(currentUser._id || currentUser.id) }
+      : {}),
     ...(currentUser.role ? { "x-user-role": currentUser.role } : {}),
-    ...(dbUrl ? { "x-db-url": dbUrl } : {}),
     ...extra,
   };
 };
@@ -63,23 +64,21 @@ export const submitComplaintService = async (complaintData, authToken) => {
   const userId = String(currentUser._id || currentUser.id || "usr-" + Date.now());
   const userName = currentUser.name || "Citizen Reporter";
   const loc = complaintData.location || { lat: 22.5726, lng: 88.3639, address: "Civic Area" };
-  const dbUrl = getDatabaseUrl();
 
   let savedRecord = null;
 
   try {
     const res = await axios.post(
-      `${API}/api/complaints`, 
+      `${API}/api/complaints`,
       {
         ...complaintData,
         reportedById: userId,
         reportedByName: userName,
-        reportedByEmail: userEmail
-      }, 
+        reportedByEmail: userEmail,
+      },
       {
-        params: { db_url: dbUrl },
         headers: getRequestHeaders(authToken, { "Content-Type": "application/json" }),
-        timeout: 10000,
+        timeout: 12000,
       }
     );
     if (res.data && (res.data._id || res.data.id)) {
@@ -109,11 +108,13 @@ export const submitComplaintService = async (complaintData, authToken) => {
   }
 
   const localList = getLocalStore();
-  const filtered = localList.filter(c => String(c._id || c.id) !== String(savedRecord._id || savedRecord.id));
+  const filtered = localList.filter(
+    (c) => String(c._id || c.id) !== String(savedRecord._id || savedRecord.id)
+  );
   saveLocalStore([savedRecord, ...filtered]);
 
+  // Only dispatch new_complaint_reported — not storage (storage causes MaxListeners cascade)
   window.dispatchEvent(new Event("new_complaint_reported"));
-  window.dispatchEvent(new Event("storage"));
 
   return savedRecord;
 };
@@ -124,39 +125,40 @@ export const submitComplaintService = async (complaintData, authToken) => {
 export const fetchAllComplaintsService = async (authToken) => {
   const localList = getLocalStore();
   let serverList = [];
-  const dbUrl = getDatabaseUrl();
 
-  // 1. Try primary complaints endpoint
+  // 1. Primary: /api/complaints — no db_url param, server uses DATABASE_URL env var
   try {
     const res = await axios.get(`${API}/api/complaints`, {
-      params: { db_url: dbUrl, t: Date.now() },
       headers: getRequestHeaders(authToken, { "x-user-role": "admin" }),
-      timeout: 6000,
+      timeout: 8000,
     });
     if (res.data && Array.isArray(res.data) && res.data.length > 0) {
       serverList = res.data;
     }
-  } catch (apiErr) {
+  } catch (_) {
     // silent
   }
 
-  // 2. Secondary fallback via test-db endpoint
+  // 2. Fallback: /api/test-db (proven reliable)
   if (serverList.length === 0) {
     try {
       const res = await axios.get(`${API}/api/test-db`, {
-        params: { url: dbUrl, mode: "all", t: Date.now() },
         headers: getRequestHeaders(authToken, { "x-user-role": "admin" }),
-        timeout: 6000,
+        timeout: 8000,
       });
-      if (res.data?.complaints && Array.isArray(res.data.complaints) && res.data.complaints.length > 0) {
+      if (
+        res.data?.complaints &&
+        Array.isArray(res.data.complaints) &&
+        res.data.complaints.length > 0
+      ) {
         serverList = res.data.complaints;
       }
-    } catch (fallbackErr) {
+    } catch (_) {
       // silent
     }
   }
 
-  // 3. Merge server list with local list
+  // 3. Merge server list with local list (deduplicate by id)
   const mergedMap = new Map();
   for (const item of serverList) {
     mergedMap.set(String(item._id || item.id), item);
@@ -186,36 +188,38 @@ export const fetchUserComplaintsService = async (authToken, userEmail) => {
   const cleanEmail = (userEmail || currentUser.email || "").toLowerCase().trim();
   const userId = String(currentUser._id || currentUser.id || "");
   const localList = getLocalStore();
-  const dbUrl = getDatabaseUrl();
 
   let userServerList = [];
 
   // 1. Try backend API
   try {
     const res = await axios.get(`${API}/api/complaints`, {
-      params: { mode: "my", email: cleanEmail, user_id: userId, db_url: dbUrl, t: Date.now() },
-      headers: getRequestHeaders(authToken, { "x-user-email": cleanEmail, "x-user-id": userId }),
-      timeout: 10000,
+      params: { mode: "my", email: cleanEmail, user_id: userId },
+      headers: getRequestHeaders(authToken, {
+        "x-user-email": cleanEmail,
+        "x-user-id": userId,
+      }),
+      timeout: 8000,
     });
     if (res.data && Array.isArray(res.data) && res.data.length > 0) {
       userServerList = res.data;
     }
-  } catch (apiErr) {
-    console.warn("User complaints fetch note:", apiErr.message);
+  } catch (_) {
+    // silent
   }
 
-  // 2. Secondary fallback via test-db endpoint
+  // 2. Fallback: filter from test-db all complaints
   if (userServerList.length === 0) {
     try {
-      const res = await axios.get(`${API}/api/test-db`, {
-        params: { url: dbUrl, t: Date.now() },
-        timeout: 10000,
-      });
+      const res = await axios.get(`${API}/api/test-db`, { timeout: 8000 });
       if (res.data?.complaints && Array.isArray(res.data.complaints)) {
         userServerList = res.data.complaints.filter((c) => {
           const repEmail = (c.reportedBy?.email || "").toLowerCase().trim();
           const repId = String(c.reportedBy?._id || c.reportedBy?.id || "");
-          return (cleanEmail && repEmail === cleanEmail) || (userId && repId === userId);
+          return (
+            (cleanEmail && repEmail === cleanEmail) ||
+            (userId && repId === userId)
+          );
         });
       }
     } catch (e) {}
@@ -253,71 +257,67 @@ export const fetchUserComplaintsService = async (authToken, userEmail) => {
 // UPDATE COMPLAINT STATUS
 // ==========================================
 export const updateComplaintStatusService = async (id, status, authToken) => {
-  const dbUrl = getDatabaseUrl();
-
-  // 1. Update backend API
   try {
     await axios.put(
       `${API}/api/complaints`,
       { status, id },
-      { 
-        params: { id, db_url: dbUrl },
-        headers: getRequestHeaders(authToken, { "x-user-role": "admin" })
+      {
+        params: { id },
+        headers: getRequestHeaders(authToken, { "x-user-role": "admin" }),
+        timeout: 8000,
       }
     );
   } catch (apiErr) {
     console.warn("Status update API note:", apiErr.message);
   }
 
-  // 2. Update local store
+  // Update local store
   const localList = getLocalStore();
-  const updated = localList.map(c => 
-    (String(c._id || c.id) === String(id)) ? { ...c, status } : c
+  const updated = localList.map((c) =>
+    String(c._id || c.id) === String(id) ? { ...c, status } : c
   );
   saveLocalStore(updated);
-
-  window.dispatchEvent(new Event("new_complaint_reported"));
-  window.dispatchEvent(new Event("storage"));
 };
 
 // ==========================================
 // DELETE COMPLAINT
 // ==========================================
 export const deleteComplaintService = async (id, authToken) => {
-  const dbUrl = getDatabaseUrl();
-
-  // 1. Delete via backend API
   try {
     await axios.delete(`${API}/api/complaints`, {
-      params: { id, db_url: dbUrl },
+      params: { id },
       headers: getRequestHeaders(authToken),
+      timeout: 8000,
     });
   } catch (apiErr) {
     console.warn("Delete API note:", apiErr.message);
   }
 
-  // 2. Update local store
+  // Update local store
   const localList = getLocalStore();
-  const updated = localList.filter(c => String(c._id || c.id) !== String(id));
+  const updated = localList.filter((c) => String(c._id || c.id) !== String(id));
   saveLocalStore(updated);
-
-  window.dispatchEvent(new Event("new_complaint_reported"));
-  window.dispatchEvent(new Event("storage"));
 };
 
 // ==========================================
 // CHANGE ADMIN PASSWORD
 // ==========================================
-export const changeAdminPasswordService = async (currentPassword, newPassword, authToken) => {
-  const dbUrl = getDatabaseUrl();
-
+export const changeAdminPasswordService = async (
+  currentPassword,
+  newPassword,
+  authToken
+) => {
   try {
     const res = await axios.post(
       `${API}/api/auth`,
       { currentPassword, newPassword },
-      { 
-        params: { action: "change-password", db_url: dbUrl },
-        headers: getRequestHeaders(authToken, { "x-user-email": "admin@safai.org", "x-user-role": "admin" })
+      {
+        params: { action: "change-password" },
+        headers: getRequestHeaders(authToken, {
+          "x-user-email": "admin@safai.org",
+          "x-user-role": "admin",
+        }),
+        timeout: 8000,
       }
     );
     if (res.data?.message) {
@@ -326,9 +326,9 @@ export const changeAdminPasswordService = async (currentPassword, newPassword, a
         localStorage.setItem("safai_admin_password_hash", hashed);
       } catch (e) {}
 
-      return { 
-        success: true, 
-        message: "Admin password updated successfully and active across all portals!" 
+      return {
+        success: true,
+        message: "Admin password updated successfully and active across all portals!",
       };
     }
   } catch (apiErr) {
@@ -337,8 +337,8 @@ export const changeAdminPasswordService = async (currentPassword, newPassword, a
     }
   }
 
-  return { 
-    success: true, 
-    message: "Admin password updated and synchronized." 
+  return {
+    success: true,
+    message: "Admin password updated and synchronized.",
   };
 };

@@ -158,23 +158,21 @@ const AdminDashboard = () => {
         `${API}/api/test-db`,
         { url: inputToTest },
         { 
-          headers: { 
-            "x-db-url": inputToTest,
-            "Content-Type": "application/json" 
-          }, 
+          headers: { "Content-Type": "application/json" }, 
           timeout: 12000 
         }
       );
 
       if (res.data) {
         setDbTestResult(res.data);
+        // If test-db returned complaints, use them directly
         if (Array.isArray(res.data.complaints) && res.data.complaints.length > 0) {
           setComplaints(res.data.complaints);
         }
       }
     } catch (err) {
       try {
-        const getRes = await axios.get(`${API}/api/test-db?url=${encodeURIComponent(inputToTest)}`, { timeout: 8000 });
+        const getRes = await axios.get(`${API}/api/test-db`, { timeout: 8000 });
         setDbTestResult(getRes.data);
         if (Array.isArray(getRes.data?.complaints) && getRes.data.complaints.length > 0) {
           setComplaints(getRes.data.complaints);
@@ -188,7 +186,7 @@ const AdminDashboard = () => {
       }
     } finally {
       setDbTesting(false);
-      await fetchData(true);
+      // No fetchData() here - it would race against and reset the complaints we just set
     }
   };
 
