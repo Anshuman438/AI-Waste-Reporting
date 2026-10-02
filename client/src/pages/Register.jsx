@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import axios from "axios";
-import bcrypt from "bcryptjs";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { 
   FiUser, 
@@ -17,7 +16,6 @@ import GoogleAuthButton from "../components/GoogleAuthButton";
 import "./Register.css";
 
 import { API } from "../config/api";
-import { getTiDBClient, ensureTiDBTables } from "../services/tidbService";
 
 const Register = () => {
   const navigate = useNavigate();
@@ -59,8 +57,9 @@ const Register = () => {
     // 1. Try Backend API
     try {
       const res = await axios.post(
-        `${API}/api/auth/register`,
-        { name: cleanName, email: cleanEmail, password }
+        `${API}/api/auth`,
+        { name: cleanName, email: cleanEmail, password },
+        { params: { action: "register" }, timeout: 8000 }
       );
 
       if (res.data && res.data.token) {
@@ -73,197 +72,145 @@ const Register = () => {
         return;
       }
     } catch (err) {
-      console.log("API Register note:", err.response?.data?.message || err.message);
-
-      // 2. Direct TiDB Cloud Registration
-      const conn = getTiDBClient();
-      if (conn) {
-        try {
-          await ensureTiDBTables(conn);
-          const checkRows = await conn.execute(`SELECT id FROM users WHERE LOWER(email) = ? LIMIT 1`, [cleanEmail]);
-          if (checkRows && checkRows.length > 0) {
-            setError("An account already exists with this email. Please sign in.");
-            setLoading(false);
-            return;
-          }
-
-          const hashedPassword = await bcrypt.hash(password, 10);
-          const insertRes = await conn.execute(
-            `INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)`,
-            [cleanName, cleanEmail, hashedPassword, "user"]
-          );
-
-          const userId = insertRes.lastInsertId ? String(insertRes.lastInsertId) : "tidb-usr-" + Date.now();
-          const registeredUser = {
-            _id: userId,
-            id: userId,
-            name: cleanName,
-            email: cleanEmail,
-            role: "user",
-            token: "tidb-token-" + Date.now(),
-          };
-
-          localStorage.setItem("token", registeredUser.token);
-          localStorage.setItem("user", JSON.stringify(registeredUser));
-          setSuccess(true);
-          setTimeout(() => {
-            handleAuthSuccess(registeredUser);
-          }, 800);
-          return;
-
-        } catch (tidbErr) {
-          console.warn("Direct TiDB Register Error:", tidbErr.message);
-        }
+      const errMsg = err.response?.data?.message;
+      if (errMsg) {
+        setError(errMsg);
+        setLoading(false);
+        return;
       }
-
-      // 3. Resilient Local Registration Fallback
-      const fallbackUser = {
-        _id: "usr-" + Date.now(),
-        id: "usr-" + Date.now(),
-        name: cleanName,
-        email: cleanEmail,
-        role: "user",
-        token: "session-" + Date.now(),
-      };
-
-      localStorage.setItem("token", fallbackUser.token);
-      localStorage.setItem("user", JSON.stringify(fallbackUser));
-      setSuccess(true);
-      setTimeout(() => {
-        handleAuthSuccess(fallbackUser);
-      }, 800);
-    } finally {
-      setLoading(false);
     }
+
+    // 2. Fallback User Registration
+    const fallbackUser = {
+      _id: "usr-" + Date.now(),
+      name: cleanName || "Citizen User",
+      email: cleanEmail,
+      role: "user",
+      token: "usr-token-" + Date.now(),
+    };
+
+    localStorage.setItem("token", fallbackUser.token);
+    localStorage.setItem("user", JSON.stringify(fallbackUser));
+    setSuccess(true);
+    setTimeout(() => {
+      handleAuthSuccess(fallbackUser);
+    }, 800);
   };
 
   return (
-    <div className="auth-royal-page">
-      <div className="auth-royal-card animate-fade-in">
-        
-        {/* Brand Header */}
-        <div className="auth-brand" onClick={() => navigate("/")}>
-          <div className="auth-logo-badge">
-            <LuLeaf size={24} />
-          </div>
-          <div className="auth-brand-text">
-            <span>safAI</span>
-          </div>
-        </div>
+    <div className="register-page">
+      <div className="register-backdrop">
+        <div className="glow-sphere glow-1"></div>
+        <div className="glow-sphere glow-2"></div>
+      </div>
 
-        <div className="auth-header">
-          <h2>Create Citizen Account</h2>
-          <p>Join the smart civic network for clean neighborhoods.</p>
-        </div>
-
-        {/* Error Alert Box */}
-        {error && (
-          <div className="auth-error-banner animate-fade-in">
-            <FiAlertCircle size={18} />
-            <span>{error}</span>
+      <div className="register-card-container">
+        <div className="register-card">
+          <div className="register-header">
+            <div className="brand-badge">
+              <LuLeaf className="leaf-icon" />
+              <span>safAI Platform</span>
+            </div>
+            <h2>Create Account</h2>
+            <p>Join the community to report civic waste and track cleanup progress.</p>
           </div>
-        )}
 
-        {/* Success Alert Box */}
-        {success && (
-          <div className="auth-success-banner animate-fade-in">
-            <FiCheckCircle size={18} />
-            <span>Account created successfully! Connecting session...</span>
+          {error && (
+            <div className="auth-alert error">
+              <FiAlertCircle className="alert-icon" />
+              <span>{error}</span>
+            </div>
+          )}
+
+          {success && (
+            <div className="auth-alert success">
+              <FiCheckCircle className="alert-icon" />
+              <span>Account created successfully! Redirecting...</span>
+            </div>
+          )}
+
+          <form onSubmit={handleRegister} className="auth-form">
+            <div className="form-group">
+              <label>Full Name</label>
+              <div className="input-wrapper">
+                <FiUser className="input-icon" />
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Anshuman Singh"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label>Email Address</label>
+              <div className="input-wrapper">
+                <FiMail className="input-icon" />
+                <input
+                  type="email"
+                  required
+                  placeholder="name@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label>Password</label>
+              <div className="input-wrapper">
+                <FiLock className="input-icon" />
+                <input
+                  type={showPassword ? "text" : "password"}
+                  required
+                  placeholder="At least 6 characters"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+                <button
+                  type="button"
+                  className="password-toggle-btn"
+                  onClick={() => setShowPassword(!showPassword)}
+                  tabIndex={-1}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? <FiEyeOff /> : <FiEye />}
+                </button>
+              </div>
+            </div>
+
+            <button type="submit" className="submit-auth-btn" disabled={loading}>
+              {loading ? (
+                <div className="btn-spinner"></div>
+              ) : (
+                <>
+                  <span>Create Account</span>
+                  <FiArrowRight className="btn-arrow" />
+                </>
+              )}
+            </button>
+          </form>
+
+          <div className="auth-divider">
+            <span>OR</span>
           </div>
-        )}
 
-        {/* Google Auth Button */}
-        <div className="google-auth-wrapper">
           <GoogleAuthButton 
-            text="Sign up with Google"
             onSuccess={handleAuthSuccess}
-            disabled={loading || success}
+            onError={(msg) => setError(msg)}
           />
-        </div>
 
-        <div className="demo-divider-line">
-          <span>OR SIGN UP WITH EMAIL</span>
-        </div>
-
-        {/* Registration Form */}
-        <form onSubmit={handleRegister} className="auth-form">
-          
-          <div className="form-field-group">
-            <label>Full Name</label>
-            <div className="input-with-icon">
-              <FiUser className="field-icon" />
-              <input
-                type="text"
-                placeholder="e.g. Aryan Gupta"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-              />
-            </div>
+          <div className="auth-footer">
+            <p>
+              Already have an account?{" "}
+              <Link to="/login" className="auth-link">
+                Sign in
+              </Link>
+            </p>
           </div>
-
-          <div className="form-field-group">
-            <label>Email Address</label>
-            <div className="input-with-icon">
-              <FiMail className="field-icon" />
-              <input
-                type="email"
-                placeholder="e.g. citizen@safai.org"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
-          </div>
-
-          <div className="form-field-group">
-            <label>Create Password</label>
-            <div className="input-with-icon">
-              <FiLock className="field-icon" />
-              <input
-                type={showPassword ? "text" : "password"}
-                placeholder="Minimum 6 characters"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-              <button 
-                type="button" 
-                className="password-toggle-btn"
-                onClick={() => setShowPassword(!showPassword)}
-                tabIndex={-1}
-                aria-label={showPassword ? "Hide password" : "Show password"}
-              >
-                {showPassword ? <FiEyeOff size={18} /> : <FiEye size={18} />}
-              </button>
-            </div>
-          </div>
-
-          <button 
-            type="submit" 
-            className="btn-auth-submit"
-            disabled={loading || success}
-          >
-            {loading ? (
-              <span className="auth-loading-text">
-                <span className="auth-spinner"></span>
-                <span>Creating Account...</span>
-              </span>
-            ) : (
-              <>
-                <span>Create Citizen Account</span>
-                <FiArrowRight size={18} />
-              </>
-            )}
-          </button>
-        </form>
-
-        {/* Footer Link */}
-        <div className="auth-footer-text">
-          <span>Already have an account? </span>
-          <Link to={`/login${location.search}`} className="auth-link">Sign In</Link>
         </div>
-
       </div>
     </div>
   );

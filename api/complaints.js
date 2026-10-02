@@ -14,27 +14,6 @@ const getDbUrl = (req) => {
   );
 };
 
-const ensureTables = async (conn) => {
-  try {
-    await conn.execute(`
-      CREATE TABLE IF NOT EXISTS complaints (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        imageUrl LONGTEXT,
-        wasteType VARCHAR(100),
-        description TEXT,
-        lat DOUBLE,
-        lng DOUBLE,
-        locationName VARCHAR(255),
-        status VARCHAR(50) DEFAULT 'pending',
-        reported_by_id VARCHAR(255),
-        reported_by_name VARCHAR(255),
-        reported_by_email VARCHAR(255),
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-  } catch (e) {}
-};
-
 export default async function handler(req, res) {
   // Set CORS headers
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -49,7 +28,6 @@ export default async function handler(req, res) {
   let conn = null;
   try {
     conn = connect({ url: dbUrl });
-    await ensureTables(conn);
   } catch (err) {
     console.error("TiDB connect error:", err.message);
   }
