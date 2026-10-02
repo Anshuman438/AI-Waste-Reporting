@@ -146,19 +146,19 @@ const MyComplaints = () => {
             <div className="header-top-tag-row">
               <button 
                 type="button" 
-                className="btn-royal-back-sub"
+                className="btn-back-home"
                 onClick={() => navigate("/")}
               >
                 <FiArrowLeft size={15} />
                 <span>Home</span>
               </button>
-              <div className="royal-tag-capsule">
+              <div className="eco-xp-badge">
                 <LuLeaf size={14} />
                 <span>My Civic Reports</span>
               </div>
             </div>
-            <h1 className="my-complaints-title">Activity & History</h1>
-            <p className="my-complaints-subtitle">
+            <h1 className="royal-complaints-title">Activity & History</h1>
+            <p className="royal-complaints-sub">
               Live tracking of all civic waste incidents you've reported across the municipal network.
             </p>
           </div>
@@ -179,7 +179,7 @@ const MyComplaints = () => {
 
             <button 
               type="button" 
-              className="btn-report-new-top"
+              className="btn-royal-new-report"
               onClick={() => navigate("/report")}
             >
               <FiPlus size={16} />
@@ -189,43 +189,43 @@ const MyComplaints = () => {
         </div>
 
         {/* Filter Navigation Tabs */}
-        <div className="complaints-tab-bar">
-          <div className="tabs-left">
+        <div className="complaints-filter-bar">
+          <div className="filter-tab-group">
             <button 
               type="button"
-              className={`c-tab-btn ${activeTab === "all" ? "tab-active" : ""}`}
+              className={`filter-pill-btn ${activeTab === "all" ? "active" : ""}`}
               onClick={() => setActiveTab("all")}
             >
               <span>All Reports</span>
-              <span className="tab-counter">{complaints.length}</span>
+              <span className="tab-count-bubble">{complaints.length}</span>
             </button>
             <button 
               type="button"
-              className={`c-tab-btn ${activeTab === "pending" ? "tab-active" : ""}`}
+              className={`filter-pill-btn ${activeTab === "pending" ? "active" : ""}`}
               onClick={() => setActiveTab("pending")}
             >
               <span>Pending</span>
-              <span className="tab-counter">
+              <span className="tab-count-bubble">
                 {complaints.filter((c) => c.status === "pending").length}
               </span>
             </button>
             <button 
               type="button"
-              className={`c-tab-btn ${activeTab === "in-progress" ? "tab-active" : ""}`}
+              className={`filter-pill-btn ${activeTab === "in-progress" ? "active" : ""}`}
               onClick={() => setActiveTab("in-progress")}
             >
               <span>In Progress</span>
-              <span className="tab-counter">
+              <span className="tab-count-bubble">
                 {complaints.filter((c) => c.status === "in-progress").length}
               </span>
             </button>
             <button 
               type="button"
-              className={`c-tab-btn ${activeTab === "resolved" ? "tab-active" : ""}`}
+              className={`filter-pill-btn ${activeTab === "resolved" ? "active" : ""}`}
               onClick={() => setActiveTab("resolved")}
             >
               <span>Resolved</span>
-              <span className="tab-counter">
+              <span className="tab-count-bubble">
                 {complaints.filter((c) => c.status === "resolved").length}
               </span>
             </button>

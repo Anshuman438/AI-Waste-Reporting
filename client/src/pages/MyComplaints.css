@@ -104,6 +104,59 @@
 .header-right-col {
   display: flex;
   align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.points-summary-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #ffffff;
+  border: 1.5px solid rgba(197, 155, 76, 0.3);
+  padding: 8px 16px;
+  border-radius: 16px;
+  box-shadow: 0 4px 14px rgba(13, 56, 43, 0.06);
+}
+
+.points-icon-badge {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: #fef9ed;
+  color: #c59b4c;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #f3dcaf;
+}
+
+.points-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.points-label {
+  font-size: 0.70rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.points-num {
+  font-size: 1.15rem;
+  font-weight: 900;
+  color: #0d382b;
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+}
+
+.points-unit {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #c59b4c;
 }
 
 .btn-royal-new-report {

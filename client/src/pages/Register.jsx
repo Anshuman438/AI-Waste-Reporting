@@ -217,18 +217,7 @@ const Register = () => {
           </div>
 
           <div className="form-field-group">
-            <div className="label-row">
-              <label>Create Password</label>
-              <button 
-                type="button" 
-                className="pwd-toggle-btn"
-                onClick={() => setShowPassword(!showPassword)}
-                tabIndex={-1}
-              >
-                {showPassword ? <FiEyeOff size={14} /> : <FiEye size={14} />}
-                <span>{showPassword ? "Hide" : "Show"}</span>
-              </button>
-            </div>
+            <label>Create Password</label>
             <div className="input-with-icon">
               <FiLock className="field-icon" />
               <input
@@ -238,6 +227,15 @@ const Register = () => {
                 onChange={(e) => setPassword(e.target.value)}
                 required
               />
+              <button 
+                type="button" 
+                className="password-toggle-btn"
+                onClick={() => setShowPassword(!showPassword)}
+                tabIndex={-1}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? <FiEyeOff size={18} /> : <FiEye size={18} />}
+              </button>
             </div>
           </div>
 
@@ -262,8 +260,8 @@ const Register = () => {
 
         {/* Footer Link */}
         <div className="auth-footer-text">
-          <span>Already have an account?</span>
-          <Link to={`/login${location.search}`}>Sign In</Link>
+          <span>Already have an account? </span>
+          <Link to={`/login${location.search}`} className="auth-link">Sign In</Link>
         </div>
 
       </div>

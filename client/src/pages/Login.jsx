@@ -223,18 +223,7 @@ const Login = () => {
           </div>
 
           <div className="form-field-group">
-            <div className="label-row">
-              <label>Password</label>
-              <button 
-                type="button" 
-                className="pwd-toggle-btn"
-                onClick={() => setShowPassword(!showPassword)}
-                tabIndex={-1}
-              >
-                {showPassword ? <FiEyeOff size={14} /> : <FiEye size={14} />}
-                <span>{showPassword ? "Hide" : "Show"}</span>
-              </button>
-            </div>
+            <label>Password</label>
             <div className="input-with-icon">
               <FiLock className="field-icon" />
               <input
@@ -244,6 +233,15 @@ const Login = () => {
                 onChange={(e) => setPassword(e.target.value)}
                 required
               />
+              <button 
+                type="button" 
+                className="password-toggle-btn"
+                onClick={() => setShowPassword(!showPassword)}
+                tabIndex={-1}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? <FiEyeOff size={18} /> : <FiEye size={18} />}
+              </button>
             </div>
           </div>
 
@@ -266,38 +264,10 @@ const Login = () => {
           </button>
         </form>
 
-        {/* Quick Demo Access Bar */}
-        <div className="demo-access-panel">
-          <div className="demo-chips-grid">
-            <button 
-              type="button" 
-              className="btn-demo-chip"
-              onClick={() => {
-                setEmail("admin");
-                setPassword("123456");
-              }}
-            >
-              <FiShield size={14} />
-              <span>Fill Admin Demo</span>
-            </button>
-            <button 
-              type="button" 
-              className="btn-demo-chip"
-              onClick={() => {
-                setEmail("citizen@safai.org");
-                setPassword("123456");
-              }}
-            >
-              <LuSparkles size={14} />
-              <span>Fill Citizen Demo</span>
-            </button>
-          </div>
-        </div>
-
         {/* Footer Link */}
         <div className="auth-footer-text">
-          <span>Don't have an account?</span>
-          <Link to={`/register${location.search}`}>Create an Account</Link>
+          <span>Don't have an account? </span>
+          <Link to={`/register${location.search}`} className="auth-link">Create an Account</Link>
         </div>
 
       </div>
