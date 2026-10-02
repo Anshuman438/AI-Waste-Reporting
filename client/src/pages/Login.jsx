@@ -141,100 +141,95 @@ const Login = () => {
   };
 
   return (
-    <div className="login-page">
-      <div className="login-backdrop">
-        <div className="glow-sphere glow-1"></div>
-        <div className="glow-sphere glow-2"></div>
-      </div>
+    <div className="auth-royal-page">
+      <div className="auth-royal-card">
+        {/* Brand Header */}
+        <div className="auth-brand" onClick={() => navigate("/")}>
+          <div className="auth-logo-badge">
+            <LuLeaf size={22} />
+          </div>
+          <span className="auth-brand-text">safAI</span>
+        </div>
 
-      <div className="login-card-container">
-        <div className="login-card">
-          <div className="login-header">
-            <div className="brand-badge">
-              <LuLeaf className="leaf-icon" />
-              <span>safAI Platform</span>
+        <div className="auth-header">
+          <h2>Welcome Back</h2>
+          <p>Access your civic dashboard, report incidents, and monitor urban hygiene.</p>
+        </div>
+
+        {error && (
+          <div className="auth-error-banner">
+            <FiAlertCircle size={18} />
+            <span>{error}</span>
+          </div>
+        )}
+
+        <form onSubmit={handleLogin} className="auth-form">
+          <div className="form-field-group">
+            <label>Email or Username</label>
+            <div className="input-with-icon">
+              <FiMail className="field-icon" />
+              <input
+                type="text"
+                required
+                placeholder="name@safai.org or admin"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
             </div>
-            <h2>Welcome Back</h2>
-            <p>Access your civic portal, report incidents, and monitor urban hygiene.</p>
           </div>
 
-          {error && (
-            <div className="auth-alert error">
-              <FiAlertCircle className="alert-icon" />
-              <span>{error}</span>
+          <div className="form-field-group">
+            <label>Password</label>
+            <div className="input-with-icon">
+              <FiLock className="field-icon" />
+              <input
+                type={showPassword ? "text" : "password"}
+                required
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+              <button
+                type="button"
+                className="password-toggle-btn"
+                onClick={() => setShowPassword(!showPassword)}
+                tabIndex={-1}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? <FiEyeOff size={18} /> : <FiEye size={18} />}
+              </button>
             </div>
-          )}
-
-          <form onSubmit={handleLogin} className="auth-form">
-            <div className="form-group">
-              <label>Email or Username</label>
-              <div className="input-wrapper">
-                <FiMail className="input-icon" />
-                <input
-                  type="text"
-                  required
-                  placeholder="name@safai.org or admin"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div className="form-group">
-              <div className="label-row">
-                <label>Password</label>
-              </div>
-              <div className="input-wrapper">
-                <FiLock className="input-icon" />
-                <input
-                  type={showPassword ? "text" : "password"}
-                  required
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-                <button
-                  type="button"
-                  className="password-toggle-btn"
-                  onClick={() => setShowPassword(!showPassword)}
-                  tabIndex={-1}
-                  aria-label={showPassword ? "Hide password" : "Show password"}
-                >
-                  {showPassword ? <FiEyeOff /> : <FiEye />}
-                </button>
-              </div>
-            </div>
-
-            <button type="submit" className="submit-auth-btn" disabled={loading}>
-              {loading ? (
-                <div className="btn-spinner"></div>
-              ) : (
-                <>
-                  <span>Sign In</span>
-                  <FiArrowRight className="btn-arrow" />
-                </>
-              )}
-            </button>
-          </form>
-
-          <div className="auth-divider">
-            <span>OR</span>
           </div>
 
+          <button type="submit" className="btn-auth-submit" disabled={loading}>
+            {loading ? (
+              <div className="btn-spinner"></div>
+            ) : (
+              <>
+                <span>Sign In</span>
+                <FiArrowRight />
+              </>
+            )}
+          </button>
+        </form>
+
+        <div className="demo-divider-line">
+          <span>OR</span>
+        </div>
+
+        <div className="google-auth-wrapper">
           <GoogleAuthButton 
             onSuccess={handleAuthSuccess}
             onError={(msg) => setError(msg)}
           />
-
-          <div className="auth-footer">
-            <p>
-              Don't have an account?{" "}
-              <Link to="/register" className="auth-link">
-                Register here
-              </Link>
-            </p>
-          </div>
         </div>
+
+        <p className="auth-footer-text">
+          Don't have an account?{" "}
+          <Link to="/register" className="auth-link">
+            Register here
+          </Link>
+        </p>
       </div>
     </div>
   );

@@ -98,119 +98,116 @@ const Register = () => {
   };
 
   return (
-    <div className="register-page">
-      <div className="register-backdrop">
-        <div className="glow-sphere glow-1"></div>
-        <div className="glow-sphere glow-2"></div>
-      </div>
+    <div className="auth-royal-page">
+      <div className="auth-royal-card">
+        {/* Brand Header */}
+        <div className="auth-brand" onClick={() => navigate("/")}>
+          <div className="auth-logo-badge">
+            <LuLeaf size={22} />
+          </div>
+          <span className="auth-brand-text">safAI</span>
+        </div>
 
-      <div className="register-card-container">
-        <div className="register-card">
-          <div className="register-header">
-            <div className="brand-badge">
-              <LuLeaf className="leaf-icon" />
-              <span>safAI Platform</span>
+        <div className="auth-header">
+          <h2>Create Account</h2>
+          <p>Join the community to report civic waste and track cleanup progress.</p>
+        </div>
+
+        {error && (
+          <div className="auth-error-banner">
+            <FiAlertCircle size={18} />
+            <span>{error}</span>
+          </div>
+        )}
+
+        {success && (
+          <div className="auth-success-banner">
+            <FiCheckCircle size={18} />
+            <span>Account created successfully! Redirecting...</span>
+          </div>
+        )}
+
+        <form onSubmit={handleRegister} className="auth-form">
+          <div className="form-field-group">
+            <label>Full Name</label>
+            <div className="input-with-icon">
+              <FiUser className="field-icon" />
+              <input
+                type="text"
+                required
+                placeholder="e.g. Anshuman Singh"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
             </div>
-            <h2>Create Account</h2>
-            <p>Join the community to report civic waste and track cleanup progress.</p>
           </div>
 
-          {error && (
-            <div className="auth-alert error">
-              <FiAlertCircle className="alert-icon" />
-              <span>{error}</span>
+          <div className="form-field-group">
+            <label>Email Address</label>
+            <div className="input-with-icon">
+              <FiMail className="field-icon" />
+              <input
+                type="email"
+                required
+                placeholder="name@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
             </div>
-          )}
-
-          {success && (
-            <div className="auth-alert success">
-              <FiCheckCircle className="alert-icon" />
-              <span>Account created successfully! Redirecting...</span>
-            </div>
-          )}
-
-          <form onSubmit={handleRegister} className="auth-form">
-            <div className="form-group">
-              <label>Full Name</label>
-              <div className="input-wrapper">
-                <FiUser className="input-icon" />
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Anshuman Singh"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label>Email Address</label>
-              <div className="input-wrapper">
-                <FiMail className="input-icon" />
-                <input
-                  type="email"
-                  required
-                  placeholder="name@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label>Password</label>
-              <div className="input-wrapper">
-                <FiLock className="input-icon" />
-                <input
-                  type={showPassword ? "text" : "password"}
-                  required
-                  placeholder="At least 6 characters"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-                <button
-                  type="button"
-                  className="password-toggle-btn"
-                  onClick={() => setShowPassword(!showPassword)}
-                  tabIndex={-1}
-                  aria-label={showPassword ? "Hide password" : "Show password"}
-                >
-                  {showPassword ? <FiEyeOff /> : <FiEye />}
-                </button>
-              </div>
-            </div>
-
-            <button type="submit" className="submit-auth-btn" disabled={loading}>
-              {loading ? (
-                <div className="btn-spinner"></div>
-              ) : (
-                <>
-                  <span>Create Account</span>
-                  <FiArrowRight className="btn-arrow" />
-                </>
-              )}
-            </button>
-          </form>
-
-          <div className="auth-divider">
-            <span>OR</span>
           </div>
 
+          <div className="form-field-group">
+            <label>Password</label>
+            <div className="input-with-icon">
+              <FiLock className="field-icon" />
+              <input
+                type={showPassword ? "text" : "password"}
+                required
+                placeholder="At least 6 characters"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+              <button
+                type="button"
+                className="password-toggle-btn"
+                onClick={() => setShowPassword(!showPassword)}
+                tabIndex={-1}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? <FiEyeOff size={18} /> : <FiEye size={18} />}
+              </button>
+            </div>
+          </div>
+
+          <button type="submit" className="btn-auth-submit" disabled={loading}>
+            {loading ? (
+              <div className="btn-spinner"></div>
+            ) : (
+              <>
+                <span>Create Account</span>
+                <FiArrowRight />
+              </>
+            )}
+          </button>
+        </form>
+
+        <div className="demo-divider-line">
+          <span>OR</span>
+        </div>
+
+        <div className="google-auth-wrapper">
           <GoogleAuthButton 
             onSuccess={handleAuthSuccess}
             onError={(msg) => setError(msg)}
           />
-
-          <div className="auth-footer">
-            <p>
-              Already have an account?{" "}
-              <Link to="/login" className="auth-link">
-                Sign in
-              </Link>
-            </p>
-          </div>
         </div>
+
+        <p className="auth-footer-text">
+          Already have an account?{" "}
+          <Link to="/login" className="auth-link">
+            Sign in
+          </Link>
+        </p>
       </div>
     </div>
   );
