@@ -549,11 +549,19 @@
   font-family: inherit;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   flex-shrink: 0;
+  pointer-events: auto !important;
+  z-index: 1050;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .mobile-admin-header-pill:hover {
   background: linear-gradient(135deg, #08261d 0%, #0e4533 100%);
   transform: translateY(-1px);
+}
+
+.mobile-admin-header-pill:active {
+  transform: scale(0.96);
 }
 
 /* Admin Banner inside Mobile Dropdown */
@@ -569,12 +577,19 @@
   cursor: pointer;
   margin-bottom: 8px;
   transition: all 0.2s ease;
+  pointer-events: auto !important;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .dropdown-admin-banner:hover {
   background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
   border-color: #4ade80;
   transform: translateY(-1px);
+}
+
+.dropdown-admin-banner:active {
+  transform: scale(0.98);
 }
 
 .admin-banner-left {
@@ -624,7 +639,8 @@
   position: fixed;
   bottom: 24px;
   right: 18px;
-  z-index: 9999;
+  z-index: 99999;
+  pointer-events: auto !important;
   background: linear-gradient(135deg, #0d382b 0%, #15803d 100%);
   color: #ffffff;
   border: 1.5px solid rgba(255, 255, 255, 0.45);
@@ -640,6 +656,8 @@
   backdrop-filter: blur(8px);
   animation: admin-fab-pop 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   transition: all 0.2s ease;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .floating-admin-fab:hover {

@@ -195,7 +195,10 @@ const Navbar = () => {
             <button
               type="button"
               className="mobile-admin-header-pill"
-              onClick={() => handleNav("/admin")}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleNav("/admin");
+              }}
               title="Open Admin Portal"
             >
               <FiShield size={14} />
@@ -295,7 +298,10 @@ const Navbar = () => {
           {isAdmin && (
             <div 
               className="dropdown-admin-banner" 
-              onClick={() => handleNav("/admin")}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleNav("/admin");
+              }}
             >
               <div className="admin-banner-left">
                 <div className="admin-banner-icon">
@@ -398,7 +404,10 @@ const Navbar = () => {
         <button 
           type="button"
           className="floating-admin-fab"
-          onClick={() => handleNav("/admin")}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleNav("/admin");
+          }}
           title="Open Municipal Admin Portal"
         >
           <FiShield size={16} />
