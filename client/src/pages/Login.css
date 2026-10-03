@@ -424,9 +424,67 @@
   color: #16a34a;
 }
 
+/* Back to Home & Guest Navigation Actions */
+.auth-card-top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  margin-bottom: 12px;
+}
+
+.btn-auth-back-home {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #f4f8f5;
+  border: 1px solid #dce8df;
+  color: #334d40;
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  font-family: inherit;
+  user-select: none;
+}
+
+.btn-auth-back-home:hover {
+  background: #e8f5ec;
+  color: #0d382b;
+  border-color: #86efac;
+  transform: translateX(-3px);
+  box-shadow: 0 2px 8px rgba(13, 56, 43, 0.08);
+}
+
+.auth-guest-cancel-row {
+  margin-top: 14px;
+  text-align: center;
+}
+
+.btn-guest-cancel {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  color: #64748b;
+  font-size: 0.80rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  padding: 4px 8px;
+}
+
+.btn-guest-cancel:hover {
+  color: #0d382b;
+  text-decoration: underline;
+}
+
 @media (max-width: 480px) {
   .auth-royal-card {
-    padding: 30px 20px 26px;
+    padding: 24px 18px 24px;
     border-radius: 22px;
   }
   .auth-header h2 {

@@ -10,7 +10,8 @@ import {
   FiEyeOff, 
   FiAlertCircle, 
   FiShield,
-  FiUser
+  FiUser,
+  FiArrowLeft
 } from "react-icons/fi";
 import { LuLeaf, LuSparkles } from "react-icons/lu";
 import GoogleAuthButton from "../components/GoogleAuthButton";
@@ -152,6 +153,19 @@ const Login = () => {
   return (
     <div className="auth-royal-page">
       <div className="auth-royal-card">
+        {/* Top Back Action Button */}
+        <div className="auth-card-top-bar">
+          <button 
+            type="button" 
+            className="btn-auth-back-home"
+            onClick={() => navigate("/")}
+            title="Return to Home"
+          >
+            <FiArrowLeft size={15} />
+            <span>Back to Home</span>
+          </button>
+        </div>
+
         {/* Brand Header */}
         <div className="auth-brand" onClick={() => navigate("/")}>
           <div className="auth-logo-badge">
@@ -239,6 +253,17 @@ const Login = () => {
             Register here
           </Link>
         </p>
+
+        <div className="auth-guest-cancel-row">
+          <button
+            type="button"
+            className="btn-guest-cancel"
+            onClick={() => navigate("/")}
+          >
+            <FiArrowLeft size={13} />
+            <span>Continue as guest without logging in</span>
+          </button>
+        </div>
       </div>
     </div>
   );
