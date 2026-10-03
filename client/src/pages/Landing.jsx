@@ -27,7 +27,7 @@ import {
   LuCompass,
   LuHeartHandshake
 } from "react-icons/lu";
-import ComplaintMap from "../components/ComplaintMap";
+const ComplaintMap = React.lazy(() => import("../components/ComplaintMap"));
 import heroBgImg from "../assets/hero_bg_panoramic.png";
 import "./Landing.css";
 
@@ -392,7 +392,9 @@ const Landing = () => {
             </div>
 
             <div className="map-canvas-wrapper">
-              <ComplaintMap complaints={complaints} />
+              <React.Suspense fallback={<div style={{height:400,display:'flex',alignItems:'center',justifyContent:'center',background:'#f0f4f8',borderRadius:16,color:'#64748b',fontSize:14}}>🗺️ Loading map…</div>}>
+                <ComplaintMap complaints={complaints} />
+              </React.Suspense>
             </div>
 
           </div>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
-import * as tf from "@tensorflow/tfjs";
+
 import { 
   FiCamera, 
   FiUploadCloud, 
@@ -32,6 +32,7 @@ import { submitComplaintService } from "../services/tidbService";
 const ReportWaste = () => {
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
+  const tfRef = useRef(null); // holds dynamically imported tensorflow module
 
   const [file, setFile] = useState(null);
   const [preview, setPreview] = useState(null);
@@ -59,11 +60,13 @@ const ReportWaste = () => {
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState("");
 
-  // Load in-browser TensorFlow Model
+  // Load in-browser TensorFlow Model (dynamically so TF doesn't bloat main bundle)
   useEffect(() => {
     let isMounted = true;
     const loadModel = async () => {
       try {
+        const tf = await import("@tensorflow/tfjs");
+        tfRef.current = tf; // store so predict() can use it
         const loadedModel = await tf.loadLayersModel("/model/model.json");
         if (isMounted) {
           setModel(loadedModel);
@@ -188,7 +191,7 @@ const ReportWaste = () => {
 
     img.onload = async () => {
       try {
-        const tensor = tf.browser
+        const tensor = tfRef.current.browser
           .fromPixels(img)
           .resizeNearestNeighbor([224, 224])
           .toFloat()

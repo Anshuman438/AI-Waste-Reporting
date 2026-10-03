@@ -28,7 +28,7 @@ import {
 import { LuLeaf, LuSparkles, LuTrash2 as LuTrashIcon } from "react-icons/lu";
 import { useNavigate } from "react-router-dom";
 import AdminSidebar from "../components/AdminSidebar";
-import ComplaintMap from "../components/ComplaintMap";
+const ComplaintMap = React.lazy(() => import("../components/ComplaintMap"));
 import ChangePasswordModal from "../components/ChangePasswordModal";
 import "./AdminDashboard.css";
 
@@ -450,7 +450,9 @@ const AdminDashboard = () => {
               <span className="map-counter-badge">{complaints.length} Geo-pins</span>
             </div>
             <div className="admin-map-container-box">
-              <ComplaintMap complaints={complaints} />
+              <React.Suspense fallback={<div style={{height:400,display:'flex',alignItems:'center',justifyContent:'center',background:'#f0f4f8',borderRadius:16,color:'#64748b',fontSize:14}}>🗺️ Loading map…</div>}>
+                <ComplaintMap complaints={complaints} />
+              </React.Suspense>
             </div>
           </div>
 
