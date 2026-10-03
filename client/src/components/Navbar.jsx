@@ -100,6 +100,13 @@ const Navbar = () => {
     return location.pathname === path;
   };
 
+  const isAdmin = Boolean(
+    user && (
+      (user.role && String(user.role).toLowerCase() === "admin") ||
+      (user.email && String(user.email).toLowerCase() === "admin@safai.org")
+    )
+  );
+
   return (
     <header className="cleanify-navbar" ref={navRef}>
       <div className="cleanify-nav-container">
@@ -155,7 +162,7 @@ const Navbar = () => {
             </button>
           )}
 
-          {user?.role === "admin" && (
+          {isAdmin && (
             <button 
               type="button"
               className={`cleanify-nav-pill admin-nav-pill ${isActive("/admin") ? "active" : ""}`}
@@ -183,13 +190,26 @@ const Navbar = () => {
             <span className="bell-badge-dot"></span>
           </button>
 
+          {/* Prominent Admin Pill for Mobile / Small Screens */}
+          {isAdmin && (
+            <button
+              type="button"
+              className="mobile-admin-header-pill"
+              onClick={() => handleNav("/admin")}
+              title="Open Admin Portal"
+            >
+              <FiShield size={14} />
+              <span>Admin</span>
+            </button>
+          )}
+
           {/* Laptop Mode Direct Auth Buttons (NO DROPDOWN ON LAPTOP) */}
           <div className="desktop-direct-actions">
             {user ? (
               <div className="desktop-user-group">
                 <div className="desktop-user-pill">
                   <div className="desktop-avatar">
-                    <span>{user?.role === "admin" ? "👨🏻‍💼" : "🌱"}</span>
+                    <span>{isAdmin ? "👨🏻‍💼" : "🌱"}</span>
                   </div>
                   <span className="desktop-name">{user?.name ? user.name.split(" ")[0] : "Hero"}</span>
                 </div>
@@ -228,7 +248,7 @@ const Navbar = () => {
             {user ? (
               <>
                 <div className="nav-avatar-img">
-                  <span>{user?.role === "admin" ? "👨🏻‍💼" : "🌱"}</span>
+                  <span>{isAdmin ? "👨🏻‍💼" : "🌱"}</span>
                 </div>
                 <FiChevronDown size={14} className={`chevron-icon ${mobileMenuOpen ? "rotate" : ""}`} />
               </>
@@ -259,15 +279,34 @@ const Navbar = () => {
           {user && (
             <div className="dropdown-user-strip">
               <div className="dropdown-avatar-pill">
-                <span>{user?.role === "admin" ? "👨🏻‍💼" : "🌱"}</span>
+                <span>{isAdmin ? "👨🏻‍💼" : "🌱"}</span>
               </div>
               <div className="dropdown-user-info">
                 <strong>{user?.name || "Eco Citizen"}</strong>
                 <span>{user?.email || "citizen@safai.org"}</span>
               </div>
-              <span className={`dropdown-role-tag ${user?.role === "admin" ? "admin" : "citizen"}`}>
-                {user?.role === "admin" ? "Admin" : "Citizen"}
+              <span className={`dropdown-role-tag ${isAdmin ? "admin" : "citizen"}`}>
+                {isAdmin ? "Admin" : "Citizen"}
               </span>
+            </div>
+          )}
+
+          {/* High-Visibility Admin Banner Card */}
+          {isAdmin && (
+            <div 
+              className="dropdown-admin-banner" 
+              onClick={() => handleNav("/admin")}
+            >
+              <div className="admin-banner-left">
+                <div className="admin-banner-icon">
+                  <FiShield size={18} />
+                </div>
+                <div>
+                  <strong>Admin Control Center</strong>
+                  <p>Civic triage &amp; crew dispatch</p>
+                </div>
+              </div>
+              <span className="admin-banner-arrow">➔</span>
             </div>
           )}
 
@@ -291,28 +330,30 @@ const Navbar = () => {
               <span>Report Waste</span>
             </button>
 
+            {isAdmin && (
+              <button 
+                type="button" 
+                className={`dropdown-simple-item admin-link ${isActive("/admin") ? "active" : ""}`}
+                onClick={() => handleNav("/admin")}
+              >
+                <FiShield size={17} />
+                <span>Admin Portal</span>
+              </button>
+            )}
+
+            {user && (
+              <button 
+                type="button" 
+                className={`dropdown-simple-item ${isActive("/my-complaints") ? "active" : ""}`}
+                onClick={() => handleNav("/my-complaints")}
+              >
+                <FiAward size={17} />
+                <span>My Reports &amp; Points</span>
+              </button>
+            )}
+
             {user ? (
               <>
-                <button 
-                  type="button" 
-                  className={`dropdown-simple-item ${isActive("/my-complaints") ? "active" : ""}`}
-                  onClick={() => handleNav("/my-complaints")}
-                >
-                  <FiAward size={17} />
-                  <span>My Reports & Points</span>
-                </button>
-
-                {user?.role === "admin" && (
-                  <button 
-                    type="button" 
-                    className={`dropdown-simple-item admin-link ${isActive("/admin") ? "active" : ""}`}
-                    onClick={() => handleNav("/admin")}
-                  >
-                    <FiShield size={17} />
-                    <span>Admin Portal</span>
-                  </button>
-                )}
-
                 <div className="dropdown-sep-line"></div>
 
                 <button 
@@ -350,6 +391,19 @@ const Navbar = () => {
           </div>
 
         </div>
+      )}
+
+      {/* Floating Quick Action Button on Mobile for Admin */}
+      {isAdmin && location.pathname !== "/admin" && (
+        <button 
+          type="button"
+          className="floating-admin-fab"
+          onClick={() => handleNav("/admin")}
+          title="Open Municipal Admin Portal"
+        >
+          <FiShield size={16} />
+          <span>Admin Portal</span>
+        </button>
       )}
 
     </header>

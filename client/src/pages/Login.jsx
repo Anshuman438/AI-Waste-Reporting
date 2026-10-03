@@ -31,13 +31,22 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const isUserAdmin = (u) => {
+    return Boolean(
+      u && (
+        (u.role && String(u.role).toLowerCase() === "admin") ||
+        (u.email && String(u.email).toLowerCase() === "admin@safai.org")
+      )
+    );
+  };
+
   // Auto redirect if already logged in
   useEffect(() => {
     const token = localStorage.getItem("token");
     const user = JSON.parse(localStorage.getItem("user") || "null");
 
     if (token && user) {
-      if (user.role === "admin") {
+      if (isUserAdmin(user)) {
         navigate("/admin");
       } else {
         navigate(redirectPath === "/dashboard" ? "/dashboard" : redirectPath);
@@ -47,7 +56,7 @@ const Login = () => {
 
   const handleAuthSuccess = (userData) => {
     window.dispatchEvent(new Event("storage"));
-    if (userData.role === "admin") {
+    if (isUserAdmin(userData)) {
       navigate("/admin");
     } else {
       navigate(redirectPath);
