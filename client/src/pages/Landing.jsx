@@ -65,12 +65,58 @@ const Landing = () => {
     }
   ];
 
+  // Time formatting helper for genuine dynamic relative timestamps
+  const formatTimeAgo = (dateStr) => {
+    if (!dateStr) return "Just now";
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return "Recently";
+    const diffSec = Math.floor((Date.now() - d.getTime()) / 1000);
+    if (diffSec < 60) return "Just now";
+    const diffMin = Math.floor(diffSec / 60);
+    if (diffMin < 60) return `${diffMin}m ago`;
+    const diffHr = Math.floor(diffMin / 60);
+    if (diffHr < 24) return `${diffHr}h ago`;
+    const diffDays = Math.floor(diffHr / 24);
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  };
+
+  // Waste type label helper with concise icons to prevent thumbnail badge overflow
+  const formatWasteType = (type) => {
+    const t = (type || "").toLowerCase();
+    if (t === "biodegradable" || t === "bio" || t === "organic") return "🌿 Bio";
+    if (t === "plastic") return "🧴 Plastic";
+    if (t === "metal") return "🥫 Metal";
+    if (t === "e-waste") return "⚡ E-Waste";
+    return t ? t.charAt(0).toUpperCase() + t.slice(1) : "Waste";
+  };
+
   useEffect(() => {
     const fetchRecent = async () => {
       try {
-        const res = await axios.get(`${API}/api/complaints`);
-        if (res.data && res.data.length > 0) {
-          setComplaints(res.data);
+        let list = [];
+        try {
+          const res = await axios.get(`${API}/api/complaints`, { timeout: 6000 });
+          if (Array.isArray(res.data) && res.data.length > 0) {
+            list = res.data;
+          }
+        } catch (_) {}
+
+        if (list.length === 0) {
+          try {
+            const res = await axios.get(`${API}/api/test-db`, { timeout: 6000 });
+            if (Array.isArray(res.data?.complaints) && res.data.complaints.length > 0) {
+              list = res.data.complaints;
+            }
+          } catch (_) {}
+        }
+
+        if (list.length > 0) {
+          // Deduplicate by ID
+          const unique = Array.from(
+            new Map(list.map((c) => [String(c._id || c.id), c])).values()
+          );
+          setComplaints(unique);
         } else {
           setComplaints(defaultRecentReports);
         }
@@ -375,46 +421,63 @@ const Landing = () => {
             </div>
 
             <div className="activity-cards-stack">
-              {complaints.slice(0, 4).map((item, idx) => (
-                <div 
-                  key={item._id || idx} 
-                  className="activity-item-card"
-                  onClick={() => navigate("/my-complaints")}
-                >
-                  <div className="activity-thumb-wrapper">
-                    <img 
-                      src={item.imageUrl || "https://images.unsplash.com/photo-1530587191325-3db32d826c18?w=160&auto=format&fit=crop&q=80"} 
-                      alt="Report thumbnail" 
-                      className="activity-thumb-img" 
-                    />
-                    <span className="activity-type-tag">
-                      {item.wasteType ? (item.wasteType.charAt(0).toUpperCase() + item.wasteType.slice(1)) : "Waste Issue"}
-                    </span>
-                  </div>
+              {complaints.slice(0, 4).map((item, idx) => {
+                const compId = item._id || item.id || idx;
+                const status = (item.status || "pending").toLowerCase();
+                const displayStatus = 
+                  status === "resolved" ? "Resolved" : 
+                  status === "in-progress" ? "In Progress" : "Pending";
+                const locationText = item.location?.address || item.locationName || "Civic Area";
+                const titleText = item.description || "Civic waste reported via safAI AI";
 
-                  <div className="activity-info-block">
-                    <div className="activity-location-line">
-                      <FiMapPin className="pin-icon-sm" size={13} />
-                      <strong>{item.locationName || item.description || "Campus Zone 3, Near Library"}</strong>
-                    </div>
-                    <div className="activity-meta-line">
-                      <span className="meta-time">
-                        <FiClock size={12} /> {item.time || "2 hours ago"}
-                      </span>
-                      <span className="meta-ai-badge">
-                        <LuSparkles size={12} /> AI Verified
+                return (
+                  <div 
+                    key={compId} 
+                    className="activity-item-card"
+                    onClick={() => navigate("/my-complaints")}
+                  >
+                    <div className="activity-thumb-wrapper">
+                      <img 
+                        src={item.imageUrl || "https://images.unsplash.com/photo-1530587191325-3db32d826c18?w=200&auto=format&fit=crop&q=80"} 
+                        alt="Report thumbnail" 
+                        className="activity-thumb-img" 
+                      />
+                      <span className="activity-type-tag">
+                        {formatWasteType(item.wasteType)}
                       </span>
                     </div>
-                  </div>
 
-                  <div className="activity-status-action">
-                    <span className={`status-pill-chip ${item.status === "in-progress" ? "in-progress" : item.status === "resolved" ? "resolved" : "submitted"}`}>
-                      {item.status === "in-progress" ? "In Progress" : item.status === "resolved" ? "Resolved" : "Submitted"}
-                    </span>
-                    <FiChevronRight className="arrow-hover-icon" size={18} />
+                    <div className="activity-info-block">
+                      <div className="activity-title-line">
+                        <h4 className="activity-report-title" title={titleText}>
+                          {titleText}
+                        </h4>
+                      </div>
+
+                      <div className="activity-location-line" title={locationText}>
+                        <FiMapPin className="pin-icon-sm" size={12} />
+                        <span className="activity-loc-text">{locationText}</span>
+                      </div>
+
+                      <div className="activity-meta-line">
+                        <span className="meta-time">
+                          <FiClock size={12} /> {formatTimeAgo(item.createdAt || item.time)}
+                        </span>
+                        <span className="meta-ai-badge">
+                          <LuSparkles size={12} /> AI Verified
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="activity-status-action">
+                      <span className={`status-pill-chip ${status === "in-progress" ? "in-progress" : status === "resolved" ? "resolved" : "submitted"}`}>
+                        {displayStatus}
+                      </span>
+                      <FiChevronRight className="arrow-hover-icon" size={18} />
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 

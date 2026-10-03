@@ -1111,23 +1111,26 @@
   border-radius: 20px;
   cursor: pointer;
   transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  min-width: 0;
 }
 
 .activity-item-card:hover {
   background: #ffffff;
   border-color: #86efac;
-  transform: translateX(5px);
-  box-shadow: 0 8px 20px rgba(22, 101, 52, 0.08);
+  transform: translateX(4px);
+  box-shadow: 0 8px 24px rgba(22, 101, 52, 0.08);
 }
 
 .activity-thumb-wrapper {
   position: relative;
-  width: 64px;
-  height: 64px;
+  width: 70px;
+  height: 70px;
   border-radius: 14px;
   overflow: hidden;
   flex-shrink: 0;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  background: #f1f5f9;
 }
 
 .activity-thumb-img {
@@ -1141,14 +1144,18 @@
   bottom: 0;
   left: 0;
   right: 0;
-  background: rgba(19, 42, 28, 0.85);
+  background: rgba(13, 56, 43, 0.90);
   backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   color: #ffffff;
-  font-size: 0.64rem;
+  font-size: 0.65rem;
   font-weight: 800;
   text-align: center;
-  padding: 2px 0;
-  text-transform: capitalize;
+  padding: 3px 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: 0.02em;
 }
 
 .activity-info-block {
@@ -1157,17 +1164,40 @@
   flex-direction: column;
   gap: 4px;
   min-width: 0;
+  overflow: hidden;
+}
+
+.activity-title-line {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.activity-report-title {
+  font-size: 0.96rem;
+  font-weight: 800;
+  color: #0f291e;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.25;
 }
 
 .activity-location-line {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 0.92rem;
-  color: #12281a;
+  gap: 5px;
+  font-size: 0.78rem;
+  color: #556860;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.activity-loc-text {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-weight: 500;
 }
 
 .pin-icon-sm {
@@ -1179,9 +1209,10 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  font-size: 0.76rem;
+  font-size: 0.74rem;
   color: #6a8575;
   font-weight: 600;
+  margin-top: 2px;
 }
 
 .meta-time {
@@ -1196,28 +1227,47 @@
   gap: 4px;
   color: #0284c7;
   background: #f0f9ff;
-  padding: 2px 8px;
+  border: 1px solid #bae6fd;
+  padding: 2px 7px;
   border-radius: 6px;
   font-weight: 700;
+  font-size: 0.72rem;
 }
 
 .activity-status-action {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-shrink: 0;
 }
 
 .status-pill-chip {
-  font-size: 0.74rem;
+  font-size: 0.75rem;
   font-weight: 800;
-  padding: 5px 12px;
+  padding: 6px 14px;
   border-radius: 9999px;
   text-transform: capitalize;
+  white-space: nowrap;
+  letter-spacing: 0.02em;
 }
 
-.status-pill-chip.submitted { background: #e0f2fe; color: #0369a1; }
-.status-pill-chip.in-progress { background: #fef3c7; color: #b45309; }
-.status-pill-chip.resolved { background: #dcfce7; color: #15803d; }
+.status-pill-chip.submitted { 
+  background: #fff7ed; 
+  color: #c2410c; 
+  border: 1px solid #fed7aa; 
+}
+
+.status-pill-chip.in-progress { 
+  background: #eff6ff; 
+  color: #1d4ed8; 
+  border: 1px solid #bfdbfe; 
+}
+
+.status-pill-chip.resolved { 
+  background: #f0fdf4; 
+  color: #15803d; 
+  border: 1px solid #bbf7d0; 
+}
 
 .arrow-hover-icon {
   color: #9ab4a3;
